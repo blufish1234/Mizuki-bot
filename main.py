@@ -32,6 +32,6 @@ async def ping(interaction:discord.Interaction):
 @bot.tree.command(name="random_number", description="隨機數字")
 async def random_number(interaction:discord.Interaction):
     number = random.randint(0,100)
-    await interaction.response.send_message(f"讓我隨便想一個數字麼？\n那就是{number}！")
+    await interaction.response.send_message(f"隨便想一個數字？\n那就{number}吧！>w<")
 
 bot.run(token())
