@@ -23,13 +23,13 @@ async def on_ready():
     print(f'Synced commands for {bot.user}.')
 
 #取得延遲
-@bot.tree.command(name="ping",description="取得延遲")
+@bot.tree.command(name="乒",description="取得延遲")
 async def ping(interaction:discord.Interaction):
     latency = round(bot.latency * 1000)  # Latency in milliseconds
     await interaction.response.send_message(f"乓！`{latency}ms`")
 
 #隨機數字
-@bot.tree.command(name="random_number", description="隨機數字")
+@bot.tree.command(name="隨機數字", description="取得一個隨機數字")
 async def random_number(interaction:discord.Interaction):
     number = random.randint(0,100)
     await interaction.response.send_message(f"隨便想一個數字？\n那就{number}吧！>w<")
