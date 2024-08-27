@@ -41,7 +41,7 @@ async def random_number(interaction:discord.Interaction, 起始數字:int = 0, �
 bot.tree.add_command(random_number)
 
 #隨機圖片
-@app_commands.command(name="隨機圖片", description="從公共圖床獲取隨機圖片")
+@app_commands.command(name="隨機圖片", description="從Nekos API拉取隨機圖片")
 async def rimage(interaction:discord.Interaction):
     await interaction.response.defer()
     api_url = "https://api.nekosapi.com/v3/images/random/file"
