@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from discord import app_commands
 import random
 
 def token():
@@ -23,18 +24,27 @@ async def on_ready():
     print(f'Synced commands for {bot.user}.')
 
 #取得延遲
-@bot.tree.command(name="乒",description="取得延遲")
+@app_commands.command(name="乒",description="取得延遲")
 async def ping(interaction:discord.Interaction):
     latency = round(bot.latency * 1000)  # Latency in milliseconds
     await interaction.response.send_message(f"乓！`{latency}ms`")
+bot.tree.add_command(ping)
 
 #隨機數字
-@bot.tree.command(name="隨機數字", description="取得一個隨機數字")
-async def random_number(interaction:discord.Interaction, 
-    起始數字:int = commands.param(description="抽取的範圍將從這個數字開始（含這個數字），默認爲0",default=0), 
-    末尾數字:int = commands.param(description="抽取的範圍將由這個數字結束（含這個數字），默認爲100", default=100)
-    ):
+@app_commands.command(name="隨機數字", description="取得一個隨機數字")
+@app_commands.describe(起始數字="抽取範圍之起始（包含），默認值爲0",末尾數字="抽取範圍之結束（包含），默認值爲100",)
+async def random_number(interaction:discord.Interaction, 起始數字:int = 0, 末尾數字:int = 100):
     number = random.randint(起始數字,末尾數字)
     await interaction.response.send_message(f"隨便想一個數字？\n那就{number}吧！>w<")
+bot.tree.add_command(random_number)
+
+#自我介紹
+@app_commands.command(name="關於我",description="需要我自我介紹一下麼？")
+async def introduction(interaction:discord.Interaction):
+    embed = discord.Embed(color=discord.Color(int("394162",16)))
+    embed.add_field(name="", value="你好！我叫瑞希 是藍凌自己做的機器人喔！",inline=False)
+    embed.add_field(name="", value="請多多指教！",inline=False)
+    await interaction.response.send_message(embed=embed)
+bot.tree.add_command(introduction)
 
 bot.run(token())
