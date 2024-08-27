@@ -57,7 +57,7 @@ async def rimage(interaction:discord.Interaction):
             else:
                 errorcode = res.status
                 errormessage = HTTPStatus(errorcode).phrase
-                await interaction.followup.send(f"出錯了! >< HTTP狀態碼：`{errorcode} {errormessage}`")
+                await interaction.followup.send(f"出錯了! >< \nHTTP狀態碼：`{errorcode} {errormessage}`")
 bot.tree.add_command(rimage)
        
 #自我介紹
