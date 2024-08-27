@@ -2,6 +2,8 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import random
+import aiohttp
+from http import HTTPStatus
 
 def token():
     with open("token.txt","r") as file:
@@ -38,6 +40,26 @@ async def random_number(interaction:discord.Interaction, 起始數字:int = 0, �
     await interaction.response.send_message(f"隨便想一個數字？\n那就{number}吧！>w<")
 bot.tree.add_command(random_number)
 
+#隨機圖片
+@app_commands.command(name="隨機圖片", description="從公共圖床獲取隨機圖片")
+async def rimage(interaction:discord.Interaction):
+    await interaction.response.defer()
+    api_url = "https://api.nekosapi.com/v3/images/random/file"
+    params = {
+        "rating" : "safe","suggestive"
+        "is_screenshot" : "false"
+    }
+    async with aiohttp.ClientSession() as session:
+        async with session.get(api_url, params=params) as res:
+            if res.status == 200:
+                image_url = str(res.url)
+                await interaction.followup.send(image_url)
+            else:
+                errorcode = res.status
+                errormessage = HTTPStatus(errorcode).phrase
+                await interaction.followup.send(f"出錯了! >< HTTP狀態碼：`{errorcode} {errormessage}`")
+bot.tree.add_command(rimage)
+       
 #自我介紹
 @app_commands.command(name="關於我",description="需要我自我介紹一下麼？")
 async def introduction(interaction:discord.Interaction):
