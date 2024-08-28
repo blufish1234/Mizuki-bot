@@ -4,6 +4,8 @@ from discord import app_commands
 import random
 import aiohttp
 from http import HTTPStatus
+import weatherapi
+from weatherapi.rest import ApiException
 
 def token():
     with open("token.txt","r") as file:
@@ -31,6 +33,41 @@ async def ping(interaction:discord.Interaction):
     latency = round(bot.latency * 1000)  # Latency in milliseconds
     await interaction.response.send_message(f"乓！`{latency}ms`")
 bot.tree.add_command(ping)
+
+#天氣查詢
+@app_commands.command(name="查詢天氣", description=("使用WeatherAPI.com查詢指定地點的天氣"))
+@app_commands.describe(地區="請輸入地區的英文名稱")
+async def rtweather(interaction:discord.Interaction,地區:str="Taipei"):
+    apikey = "b11f285dd42f47ac84a21714242808"
+
+    configuration = weatherapi.Configuration()
+    configuration.api_key['key'] = apikey
+
+    api_instance = weatherapi.APIsApi(weatherapi.ApiClient(configuration))
+    q = 地區 
+    lang = 'zh_tw'
+
+    try:
+        api_response = api_instance.realtime_weather(q,lang=lang)
+        weather_icon = api_response.get("current",{}).get("condition",{}).get("icon")
+        weather = api_response.get("current",{}).get("condition",{}).get("text")
+        temperature = api_response.get("current",{}).get("temp_c")
+        currenttime = api_response.get("current",{}).get("last_updated")
+
+        embed = discord.Embed(
+            title=f"{地區}的實時天氣",
+            color=discord.Color(int("394162",16)),
+            
+        )
+        embed.set_thumbnail(url=f"https:{weather_icon}")
+        embed.add_field(name=weather,value="")
+        embed.add_field(name="溫度",value=f"{temperature}°C")
+        embed.set_footer(text=f"最後更新時間（本地）：{currenttime}")
+        await interaction.response.send_message(embed=embed)
+
+    except ApiException as e:
+        await interaction.response.send_message("調用API時出錯 Api->realtime_weather: %s\n" % e)
+bot.tree.add_command(rtweather)
 
 #隨機數字
 @app_commands.command(name="隨機數字", description="取得一個隨機數字")
