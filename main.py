@@ -41,10 +41,13 @@ bot.tree.add_command(ping)
 async def rtweather(interaction:discord.Interaction,地區:str):
     await interaction.response.defer()
 
-    apikey = "b11f285dd42f47ac84a21714242808"
+    def apikey():
+        with open("apikey.txt","r") as file:
+            apikey = file.read().strip()
+        return apikey
 
     configuration = weatherapi.Configuration()
-    configuration.api_key['key'] = apikey
+    configuration.api_key['key'] = apikey()
 
     api_instance = weatherapi.APIsApi(weatherapi.ApiClient(configuration))
     q = 地區 
