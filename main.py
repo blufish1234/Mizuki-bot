@@ -96,7 +96,7 @@ async def rtweather(interaction:discord.Interaction,地區:str):
         await interaction.followup.send(embed=embed)
 
     except ApiException as e:
-        await interaction.followup.send("調用API時出錯 Api->realtime_weather: %s\n" % e)
+        await interaction.followup.send("調用API時出錯 Api->realtime_weather: %s\n" % e, ephemeral=True)
 bot.tree.add_command(rtweather)
 
 #隨機數字
@@ -113,7 +113,7 @@ async def rimage(interaction:discord.Interaction):
     await interaction.response.defer()
     api_url = "https://api.nekosapi.com/v3/images/random/file"
     params = {
-        "rating" : "safe","suggestive"
+        "rating" : ["safe","suggestive"],
         "is_screenshot" : "false"
     }
     async with aiohttp.ClientSession() as session:
@@ -124,16 +124,28 @@ async def rimage(interaction:discord.Interaction):
             else:
                 errorcode = res.status
                 errormessage = HTTPStatus(errorcode).phrase
-                await interaction.followup.send(f"出錯了! >< \nHTTP狀態碼：`{errorcode} {errormessage}`")
+                await interaction.followup.send(f"出錯了! >< \nHTTP狀態碼：`{errorcode} {errormessage}`", ephemeral=True)
 bot.tree.add_command(rimage)
-       
-#自我介紹
-@app_commands.command(name="關於我",description="需要我自我介紹一下麼？")
-async def introduction(interaction:discord.Interaction):
-    embed = discord.Embed(color=discord.Color(int("394162",16)))
-    embed.add_field(name="", value="你好！我叫瑞希 是藍凌自己做的機器人喔！",inline=False)
-    embed.add_field(name="", value="請多多指教！",inline=False)
-    await interaction.response.send_message(embed=embed)
-bot.tree.add_command(introduction)
+
+#隨機色圖
+@app_commands.command(name="隨機色圖", description="從Nekos API拉取隨機色圖……你們好色喔……", nsfw=True)
+async def rnsfwimage(interaction:discord.Interaction):
+    await interaction.response.defer()
+    api_url = "https://api.nekosapi.com/v3/images/random/file"
+    params = {
+        "rating" :["borderline", "explicit"],
+        "is_screenshot" : "false"
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.get(api_url, params=params) as res:
+            if res.status == 200:
+                image_url = str(res.url)
+                await interaction.followup.send(image_url)
+            else:
+                errorcode = res.status
+                errormessage = HTTPStatus(errorcode).phrase
+                await interaction.followup.send(f"出錯了! >< \nHTTP狀態碼：`{errorcode} {errormessage}`", ephemeral=True)
+bot.tree.add_command(rnsfwimage)
 
 bot.run(token())
