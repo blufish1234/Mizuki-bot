@@ -113,7 +113,7 @@ async def rimage(interaction:discord.Interaction):
     await interaction.response.defer()
     api_url = "https://api.nekosapi.com/v3/images/random/file"
     params = {
-        "rating" : ["safe","suggestive"],
+        "rating" : ["safe"],
         "is_screenshot" : "false"
     }
     async with aiohttp.ClientSession() as session:
@@ -133,7 +133,7 @@ async def rnsfwimage(interaction:discord.Interaction):
     await interaction.response.defer()
     api_url = "https://api.nekosapi.com/v3/images/random/file"
     params = {
-        "rating" :["borderline", "explicit"],
+        "rating" :["suggestive", "borderline", "explicit"],
         "is_screenshot" : "false"
     }
 
@@ -147,5 +147,45 @@ async def rnsfwimage(interaction:discord.Interaction):
                 errormessage = HTTPStatus(errorcode).phrase
                 await interaction.followup.send(f"出錯了! >< \nHTTP狀態碼：`{errorcode} {errormessage}`", ephemeral=True)
 bot.tree.add_command(rnsfwimage)
+
+class Interactioncommands(app_commands.Group):
+    def __init__(self):
+        super().__init__(name="互動指令", description="用這些指令來和朋友互動吧！")
+
+interaction_commands = Interactioncommands()
+
+@interaction_commands.command(name="抱抱")
+async def hug(interaction:discord.Interaction, 對象:discord.User):
+    await interaction.response.send_message(f"*{interaction.user.mention}抱了抱{對象.mention}*")
+
+@interaction_commands.command(name="摸摸頭")
+async def pat(interaction:discord.Interaction, 對象:discord.User):
+    await interaction.response.send_message(f"*{interaction.user.mention}摸了摸{對象.mention}的頭*")
+
+@interaction_commands.command(name="蹭蹭")
+async def cuddle(interaction:discord.Interaction, 對象:discord.User):
+    await interaction.response.send_message(f"*{interaction.user.mention}蹭了蹭{對象.mention}*")
+
+@interaction_commands.command(name="戳戳")
+async def poke(interaction:discord.Interaction, 對象:discord.User):
+    await interaction.response.send_message(f"*{interaction.user.mention}戳了戳{對象.mention}的臉*")
+
+bot.tree.add_command(interaction_commands)
+
+#關於我
+@app_commands.command(name="關於我", description="關於瑞希的一些資訊")
+async def aboutme(interaction:discord.Interaction):
+    embed = discord.Embed(
+        title="關於瑞希",
+        color=discord.Color(int("394162",16)),
+        description="嗨！我是瑞希！\n是藍凌自己做的機器人哦！。\n我目前還在開發中，所以可能會有一些問題。\n如果有任何問題或建議，歡迎聯絡我的主人哦！",
+        timestamp=datetime.now()
+    )
+    #embed.set_thumbnail(url="https://cdn.discordapp.com/avatars/882626184074913280/3f2f7b9e0f8f0b0e4e6f6f3d7b4e0b7d.png")
+    embed.add_field(name="開發語言",value="Python")
+    embed.add_field(name="版本",value="0.1")
+    embed.add_field(name="最後更新時間",value="2024/11/7")
+    await interaction.response.send_message(embed=embed)
+bot.tree.add_command(aboutme)
 
 bot.run(token())
