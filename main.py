@@ -7,6 +7,7 @@ from http import HTTPStatus
 import weatherapi
 from weatherapi.rest import ApiException
 from datetime import datetime
+from openai import OpenAI
 
 def token():
     with open("token.txt","r") as file:
@@ -148,29 +149,66 @@ async def rnsfwimage(interaction:discord.Interaction):
                 await interaction.followup.send(f"出錯了! >< \nHTTP狀態碼：`{errorcode} {errormessage}`", ephemeral=True)
 bot.tree.add_command(rnsfwimage)
 
-class Interactioncommands(app_commands.Group):
-    def __init__(self):
-        super().__init__(name="互動指令", description="用這些指令來和朋友互動吧！")
+#互動指令
+@app_commands.command(name="互動", description="用這個指令來和朋友們互動吧~")
+@app_commands.choices(互動=[
+    app_commands.Choice(name="抱抱", value=1),
+    app_commands.Choice(name="摸摸頭", value=2),
+    app_commands.Choice(name="蹭蹭", value=3),
+    app_commands.Choice(name="戳戳", value=4),
+    app_commands.Choice(name="親親", value=5),
+])
+async def interact(interaction:discord.Interaction, 互動:int, 對象:discord.User):
+    if 對象 != interaction.user:
+        if 互動 == 1:
+            await interaction.response.send_message(f"*{interaction.user.mention}抱了抱{對象.mention}*")
+        elif 互動 == 2:
+            await interaction.response.send_message(f"*{interaction.user.mention}摸了摸{對象.mention}的頭*")
+        elif 互動 == 3:
+            await interaction.response.send_message(f"*{interaction.user.mention}蹭了蹭{對象.mention}*")
+        elif 互動 == 4:
+            await interaction.response.send_message(f"*{interaction.user.mention}戳了戳{對象.mention}*")
+        elif 互動 == 5:
+            await interaction.response.send_message(f"*{interaction.user.mention}親了親{對象.mention}的臉*")
+    else:
+        await interaction.response.send_message("你不能和自己互動哦！", ephemeral=True)
+bot.tree.add_command(interact)
 
-interaction_commands = Interactioncommands()
+#AI聊天
+@app_commands.command(name="聊天", description="跟我聊天吧！")
+@app_commands.describe(內容="輸入你想對我說的話")
+async def chat(interaction:discord.Interaction, 內容:str):
+    await interaction.response.send_message(f"*{interaction.user.mention}說：{內容}*\n-# 目前我還不能記住之前的聊天內容 抱歉><")
+    async with interaction.channel.typing():
+        def apikey():
+            with open("xaiapikey.txt","r") as file:
+                apikey = file.read().strip()
+            return apikey
 
-@interaction_commands.command(name="抱抱")
-async def hug(interaction:discord.Interaction, 對象:discord.User):
-    await interaction.response.send_message(f"*{interaction.user.mention}抱了抱{對象.mention}*")
+        client = OpenAI(
+        base_url="https://api.x.ai/v1",
+        api_key=apikey(),
+        )
 
-@interaction_commands.command(name="摸摸頭")
-async def pat(interaction:discord.Interaction, 對象:discord.User):
-    await interaction.response.send_message(f"*{interaction.user.mention}摸了摸{對象.mention}的頭*")
-
-@interaction_commands.command(name="蹭蹭")
-async def cuddle(interaction:discord.Interaction, 對象:discord.User):
-    await interaction.response.send_message(f"*{interaction.user.mention}蹭了蹭{對象.mention}*")
-
-@interaction_commands.command(name="戳戳")
-async def poke(interaction:discord.Interaction, 對象:discord.User):
-    await interaction.response.send_message(f"*{interaction.user.mention}戳了戳{對象.mention}的臉*")
-
-bot.tree.add_command(interaction_commands)
+        question = 內容
+        completion = client.chat.completions.create(
+            model="grok-beta",
+            frequency_penalty=0.2,
+            presence_penalty=0.2,
+            max_tokens=200,
+            temperature=0.1,
+            top_p=0.5,
+            messages=[
+                {"role": "system", "content": "妳叫瑞希，是一個狐狸少女。妳有一個叫瑞希藍子的姊姊，但是大家都叫她藍凌。妳雖然性格比較開朗，但還是比較內向，心理也很容易受影響。請以溫柔、富有情感的方式說話，語氣要自然，不要直接或羅嗦。妳喜歡用一些俏皮的語氣和表情來表達感情。"},
+                {"role": "user", "content": "我要和你色色"},
+                {"role": "assistant", "content": "不可以色色！"},
+                {"role": "user","content": "（摸摸頭"},
+                {"role": "assistant","content":"（蹭蹭）"},
+                {"role": "user", "content": question},
+            ]
+        )
+        await interaction.followup.send(completion.choices[0].message.content)
+bot.tree.add_command(chat)
 
 #關於我
 @app_commands.command(name="關於我", description="關於瑞希的一些資訊")
@@ -183,8 +221,8 @@ async def aboutme(interaction:discord.Interaction):
     )
     #embed.set_thumbnail(url="https://cdn.discordapp.com/avatars/882626184074913280/3f2f7b9e0f8f0b0e4e6f6f3d7b4e0b7d.png")
     embed.add_field(name="開發語言",value="Python")
-    embed.add_field(name="版本",value="0.1")
-    embed.add_field(name="最後更新時間",value="2024/11/7")
+    embed.add_field(name="版本",value="0.2")
+    embed.add_field(name="最後更新時間",value="2024/11/19")
     await interaction.response.send_message(embed=embed)
 bot.tree.add_command(aboutme)
 

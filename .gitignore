@@ -164,6 +164,7 @@ cython_debug/
 #tokens
 token.txt
 apikey.txt
+xaiapikey.txt
 
 #test script
 test.py
