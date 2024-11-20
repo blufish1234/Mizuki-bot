@@ -24,7 +24,7 @@ async def on_ready():
 
     await bot.change_presence(
         status=discord.Status.idle,
-        activity=discord.Activity(type=discord.ActivityType.watching, name="藍凌在做什麼>w<")
+        activity=discord.CustomActivity(name="想要掌握更多技能><")
     )
     await bot.tree.sync()
     print(f'Synced commands for {bot.user}.')
