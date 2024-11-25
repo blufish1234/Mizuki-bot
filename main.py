@@ -72,6 +72,7 @@ async def on_ready():
     )
     await bot.tree.sync()
     print(f'Synced commands for {bot.user}.')
+    print("Done Initializing!")
 
 #取得延遲
 @app_commands.command(name="乒",description="取得延遲")
