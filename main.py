@@ -72,12 +72,12 @@ async def on_ready():
     )
     await bot.tree.sync()
     print(f'Synced commands for {bot.user}.')
-    print("Done")
+    print("done")
 
 #取得延遲
 @app_commands.command(name="乒",description="取得延遲")
 async def ping(interaction:discord.Interaction):
-    latency = round(bot.latency * 1000)  # Latency in milliseconds
+    latency = round(bot.latency * 1000)
     await interaction.response.send_message(f"乓！`{latency}ms`")
 bot.tree.add_command(ping)
 
