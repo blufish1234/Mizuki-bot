@@ -248,8 +248,16 @@ async def on_message(message:discord.Message):
 
 #設置聊天頻道
 @app_commands.command(name="設置聊天頻道", description="（管理員限定）將目前的頻道設置為AI聊天的頻道，再次執行指令以移除頻道。", )
-@app_commands.check(lambda interaction: interaction.user.guild_permissions.administrator)
 async def setchat(interaction:discord.Interaction):
+    if not interaction.user.guild_permissions.administrator:
+        embed=discord.Embed(
+            title="權限不足!",
+            description="你沒有權限使用這個指令！",
+            color=discord.Color.red()
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
+
     with sqlite3.connect('data.db') as conn:
         c = conn.cursor()
         c.execute("SELECT channel_id FROM AIChat_channels WHERE guild_id = ?", (interaction.guild.id,))
@@ -291,12 +299,6 @@ async def setchat(interaction:discord.Interaction):
                     color=discord.Color.red()
                 )
                 await interaction.response.send_message(embed=embed)
-
-@setchat.error
-async def setchat_error(interaction:discord.Interaction, error):
-    if isinstance(error, commands.CheckFailure):
-        await interaction.response.send_message("你沒有權限執行這個指令！", ephemeral=True)
-
 bot.tree.add_command(setchat)
 
 
