@@ -314,7 +314,8 @@ async def aboutme(interaction:discord.Interaction):
     #embed.set_thumbnail(url="https://cdn.discordapp.com/avatars/882626184074913280/3f2f7b9e0f8f0b0e4e6f6f3d7b4e0b7d.png")
     embed.add_field(name="開發語言",value="Python")
     embed.add_field(name="版本",value="0.4")
-    embed.add_field(name="最後更新時間",value="2024/11/25")
+    embed.add_field(name="最後更新時間",value="2024/12/6")
+    embed.add_field(name="GitHub項目地址",value="https://github.com/blufish1234/Mizuki-bot")
     await interaction.response.send_message(embed=embed)
 bot.tree.add_command(aboutme)
 
