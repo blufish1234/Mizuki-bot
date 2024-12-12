@@ -15,7 +15,7 @@ def token():
         token = file.read().strip()
     return token
 
-def AIChat(question):
+def AIChat(model,question):
     def apikey():
         with open("xaiapikey.txt","r") as file:
             apikey = file.read().strip()
@@ -27,7 +27,7 @@ def AIChat(question):
     )
 
     completion = client.chat.completions.create(
-        model="grok-beta",
+        model=model,
         frequency_penalty=0.2,
         presence_penalty=0.2,
         max_tokens=200,
@@ -225,7 +225,7 @@ bot.tree.add_command(interact)
 async def chat(interaction:discord.Interaction, 內容:str):
     await interaction.response.send_message(f"*{interaction.user.mention}說：{內容}*\n-# 目前我還不能記住之前的聊天內容 抱歉><")
     async with interaction.channel.typing():
-        await interaction.followup.send(AIChat(內容))
+        await interaction.followup.send(AIChat("grok-beta",內容))
 bot.tree.add_command(chat)
 
 #及時AI聊天
@@ -235,7 +235,7 @@ async def on_message(message:discord.Message):
         return
     if isinstance(message.channel, discord.DMChannel):
         async with message.channel.typing():
-            await message.channel.send(f"{AIChat(message.content)}\n-# 目前我還不能記住之前的聊天內容 抱歉><")
+            await message.channel.send(f"{AIChat("grok-beta",message.content)}\n-# 目前我還不能記住之前的聊天內容 抱歉><")
     else:
         with sqlite3.connect('data.db') as conn:
             c = conn.cursor()
@@ -244,7 +244,7 @@ async def on_message(message:discord.Message):
 
             if message.channel.id in allowed_channels:
                 async with message.channel.typing():
-                    await message.channel.send(f"{AIChat(message.content)}\n-# 目前我還不能記住之前的聊天內容 抱歉><")
+                    await message.channel.send(f"{AIChat("grok-beta",message.content)}\n-# 目前我還不能記住之前的聊天內容 抱歉><")
 
 #設置聊天頻道
 @app_commands.command(name="設置聊天頻道", description="（管理員限定）將目前的頻道設置為AI聊天的頻道，再次執行指令以移除頻道。", )
