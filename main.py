@@ -28,13 +28,13 @@ def AIChat(model,question):
 
     completion = client.chat.completions.create(
         model=model,
-        frequency_penalty=0.2,
+        frequency_penalty=0.8,
         presence_penalty=0.2,
         max_tokens=200,
-        temperature=0.1,
+        #temperature=0.1,
         top_p=0.5,
         messages=[
-            {"role": "system", "content": "妳叫瑞希，是一個狐狸少女。妳有一個叫瑞希藍子的姊姊，但是大家都叫她藍凌。妳雖然性格比較開朗，但還是比較內向，心理也很容易受影響。請以溫柔、富有情感的方式說話，語氣要自然，不要直接或羅嗦。妳喜歡用一些俏皮的語氣和表情來表達感情。"},
+            {"role": "system", "content": "妳并不是一个助理，而是一位朋友。妳叫瑞希，是一個狐狸少女。妳有一個叫瑞希藍子的姊姊，但是大家都叫她藍凌。妳雖然性格開朗，但還是容易憂慮。請以溫柔、感情豐富的方式說話，語氣要自然，也不要說太多。"},
             {"role": "user", "content": "我要和你色色"},
             {"role": "assistant", "content": "不可以色色！"},
             {"role": "user","content": "（摸摸頭"},
@@ -43,6 +43,8 @@ def AIChat(model,question):
         ]
     )
     return completion.choices[0].message.content
+
+AIModel = "grok-2-latest"
 
 with sqlite3.connect('data.db') as conn:
     c = conn.cursor()
@@ -157,7 +159,7 @@ bot.tree.add_command(random_number)
 @app_commands.command(name="隨機圖片", description="從Nekos API拉取隨機圖片")
 async def rimage(interaction:discord.Interaction):
     await interaction.response.defer()
-    api_url = "https://api.nekosapi.com/v3/images/random/file"
+    api_url = "https://api.nekosapi.com/v4/images/random/file"
     params = {
         "rating" : ["safe"],
         "is_screenshot" : "false"
@@ -177,7 +179,7 @@ bot.tree.add_command(rimage)
 @app_commands.command(name="隨機色圖", description="從Nekos API拉取隨機色圖……你們好色喔……", nsfw=True)
 async def rnsfwimage(interaction:discord.Interaction):
     await interaction.response.defer()
-    api_url = "https://api.nekosapi.com/v3/images/random/file"
+    api_url = "https://api.nekosapi.com/v4/images/random/file"
     params = {
         "rating" :["suggestive", "borderline", "explicit"],
         "is_screenshot" : "false"
@@ -225,7 +227,7 @@ bot.tree.add_command(interact)
 async def chat(interaction:discord.Interaction, 內容:str):
     await interaction.response.send_message(f"*{interaction.user.mention}說：{內容}*\n-# 目前我還不能記住之前的聊天內容 抱歉><")
     async with interaction.channel.typing():
-        await interaction.followup.send(AIChat("grok-beta",內容))
+        await interaction.followup.send(AIChat(AIModel,內容))
 bot.tree.add_command(chat)
 
 #及時AI聊天
@@ -235,7 +237,7 @@ async def on_message(message:discord.Message):
         return
     if isinstance(message.channel, discord.DMChannel):
         async with message.channel.typing():
-            await message.channel.send(f"{AIChat("grok-beta",message.content)}\n-# 目前我還不能記住之前的聊天內容 抱歉><")
+            await message.channel.send(f"{AIChat(AIModel,message.content)}\n-# 目前我還不能記住之前的聊天內容 抱歉><")
     else:
         with sqlite3.connect('data.db') as conn:
             c = conn.cursor()
@@ -244,7 +246,7 @@ async def on_message(message:discord.Message):
 
             if message.channel.id in allowed_channels:
                 async with message.channel.typing():
-                    await message.channel.send(f"{AIChat("grok-beta",message.content)}\n-# 目前我還不能記住之前的聊天內容 抱歉><")
+                    await message.channel.send(f"{AIChat(AIModel,message.content)}\n-# 目前我還不能記住之前的聊天內容 抱歉><")
 
 #設置聊天頻道
 @app_commands.command(name="設置聊天頻道", description="（管理員限定）將目前的頻道設置為AI聊天的頻道，再次執行指令以移除頻道。", )
@@ -313,8 +315,8 @@ async def aboutme(interaction:discord.Interaction):
     )
     #embed.set_thumbnail(url="https://cdn.discordapp.com/avatars/882626184074913280/3f2f7b9e0f8f0b0e4e6f6f3d7b4e0b7d.png")
     embed.add_field(name="開發語言",value="Python")
-    embed.add_field(name="版本",value="0.4")
-    embed.add_field(name="最後更新時間",value="2024/12/6")
+    embed.add_field(name="版本",value="0.5")
+    embed.add_field(name="最後更新時間",value="2025/1/13")
     embed.add_field(name="GitHub項目地址",value="https://github.com/blufish1234/Mizuki-bot")
     await interaction.response.send_message(embed=embed)
 bot.tree.add_command(aboutme)
