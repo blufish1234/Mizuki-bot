@@ -58,7 +58,7 @@ with sqlite3.connect('data.db') as conn:
 
 
 intents = discord.Intents.default()
-intents.message_content = True 
+intents.message_content = True
 intents.dm_messages = True
 intents.guild_messages = True
 intents.emojis_and_stickers = True
@@ -302,7 +302,6 @@ async def setchat(interaction:discord.Interaction):
                 )
                 await interaction.response.send_message(embed=embed)
 bot.tree.add_command(setchat)
-
 
 #關於我
 @app_commands.command(name="關於我", description="關於瑞希的一些資訊")
