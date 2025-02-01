@@ -46,6 +46,15 @@ def AIChat(model,question):
 
 AIModel = "grok-2-latest"
 
+def IsAdmin(guild_id, user_role_id):
+    with sqlite3.connect('data.db') as conn:
+        c = conn.cursor()
+        c.execute('''
+            SELECT COUNT(*) FROM admin_roles 
+            WHERE guild_id = ? AND role_id = ?
+        ''', (guild_id, user_role_id))
+        return c.fetchone()[0] > 0
+
 with sqlite3.connect('data.db') as conn:
     c = conn.cursor()
 
@@ -53,6 +62,11 @@ with sqlite3.connect('data.db') as conn:
                     guild_id INTEGER,
                     channel_id INTEGER,
                     PRIMARY KEY (guild_id, channel_id)
+                )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS bot_master_roles (
+                    guild_id INTEGER,
+                    role_id INTEGER,
+                    PRIMARY KEY (guild_id)
                 )''')
     conn.commit()
 
@@ -75,6 +89,64 @@ async def on_ready():
     await bot.tree.sync()
     print(f'Synced commands for {bot.user}.')
     print("Initialization complete.")
+
+#設定機器人管理員
+@app_commands.command(name="設定管理員", description="(伺服器管理員限定）設定機器人的管理員身份組")
+@app_commands.describe(身份組="選擇管理員身份組")
+async def set_bot_master(interaction: discord.Interaction, 身份組: discord.Role):
+    if isinstance(interaction.channel, discord.DMChannel):
+        embed=discord.Embed(
+            title="錯誤!",
+            description="這個指令不能在私人訊息中使用！",
+            color=discord.Color.red()
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
+    
+    if not interaction.user.guild_permissions.administrator:
+        embed=discord.Embed(
+            title="權限不足!",
+            description="你沒有權限使用這個指令！",
+            color=discord.Color.red()
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
+    
+    guild_id = interaction.guild.id
+    role_id = 身份組.id
+
+    try:
+        with sqlite3.connect('data.db') as conn:
+            c = conn.cursor()
+            c.execute('''SELECT role_id FROM admin_roles WHERE guild_id = ? AND role_id = ?''', (guild_id, role_id))
+            result = c.fetchone()
+
+            if result:
+                c.execute('''DELETE FROM admin_roles WHERE guild_id = ? AND role_id = ?''', (guild_id, role_id))
+                conn.commit()
+                embed=discord.Embed(
+                    title="成功！",
+                    description=f"已將{身份組.mention}從機器人管理員身份組中刪除",
+                    color=discord.Color.green()
+                )
+                await interaction.response.send_message(embed=embed)
+            else:
+                c.execute('''INSERT INTO admin_roles (guild_id, role_id) VALUES (?, ?)''', (guild_id, role_id))
+                conn.commit()
+                embed=discord.Embed(
+                    title="成功！",
+                    description=f"已將{身份組.mention}設置為機器人管理員身份組",
+                    color=discord.Color.green()
+                )
+                await interaction.response.send_message(embed=embed)
+    except sqlite3.Error as e:
+        embed=discord.Embed(
+            titlle="出錯了！",
+            description=f"無法設置管理員身份組: `{e}`",
+            color=discord.Color.red()
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+bot.tree.add_command(set_bot_master)
 
 #取得延遲
 @app_commands.command(name="乒",description="取得延遲")
@@ -147,6 +219,7 @@ async def rtweather(interaction:discord.Interaction,地區:str):
         await interaction.followup.send("調用API時出錯 Api->realtime_weather: %s\n" % e, ephemeral=True)
 bot.tree.add_command(rtweather)
 
+'''
 #隨機數字
 @app_commands.command(name="隨機數字", description="取得一個隨機數字")
 @app_commands.describe(起始數字="抽取範圍之起始（包含），默認值爲0",末尾數字="抽取範圍之結束（包含），默認值爲100",)
@@ -154,6 +227,7 @@ async def random_number(interaction:discord.Interaction, 起始數字:int = 0, �
     number = random.randint(起始數字,末尾數字)
     await interaction.response.send_message(f"隨便想一個數字？\n那就{number}吧！>w<")
 bot.tree.add_command(random_number)
+'''
 
 #隨機圖片
 @app_commands.command(name="隨機圖片", description="從Nekos API拉取隨機圖片")
@@ -249,9 +323,18 @@ async def on_message(message:discord.Message):
                     await message.channel.send(f"{AIChat(AIModel,message.content)}\n-# 目前我還不能記住之前的聊天內容 抱歉><")
 
 #設置聊天頻道
-@app_commands.command(name="設置聊天頻道", description="（管理員限定）將目前的頻道設置為AI聊天的頻道，再次執行指令以移除頻道。", )
+@app_commands.command(name="設置聊天頻道", description="（機器人管理員限定）將目前的頻道設置為AI聊天的頻道，再次執行指令以移除頻道。", )
 async def setchat(interaction:discord.Interaction):
-    if not interaction.user.guild_permissions.administrator:
+    if isinstance(interaction.channel, discord.DMChannel):
+        embed=discord.Embed(
+            title="錯誤!",
+            description="這個指令不能在私人訊息中使用！",
+            color=discord.Color.red()
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
+
+    if not interaction.user.guild_permissions.administrator or not IsAdmin(interaction.guild.id, interaction.user.id):
         embed=discord.Embed(
             title="權限不足!",
             description="你沒有權限使用這個指令！",
@@ -314,8 +397,8 @@ async def aboutme(interaction:discord.Interaction):
     )
     #embed.set_thumbnail(url="https://cdn.discordapp.com/avatars/882626184074913280/3f2f7b9e0f8f0b0e4e6f6f3d7b4e0b7d.png")
     embed.add_field(name="開發語言",value="Python")
-    embed.add_field(name="版本",value="0.5")
-    embed.add_field(name="最後更新時間",value="2025/1/13")
+    embed.add_field(name="版本",value="v0.6")
+    embed.add_field(name="最後更新時間",value="2025/2/1")
     embed.add_field(name="GitHub項目地址",value="https://github.com/blufish1234/Mizuki-bot")
     await interaction.response.send_message(embed=embed)
 bot.tree.add_command(aboutme)
