@@ -283,31 +283,31 @@ async def interact(interaction:discord.Interaction, 互動:int, 對象:discord.U
     if 對象 != interaction.user:
         if 互動 == 1:
             embed = discord.Embed(
-                description=f"*{interaction.user.mention}抱了抱{對象.mention}*",
+                description=f"{interaction.user.mention}抱了抱{對象.mention}",
                 color=discord.Color(int("394162",16))
             )
             await interaction.response.send_message(embed=embed)
         elif 互動 == 2:
             embed = discord.Embed(
-                description=f"*{interaction.user.mention}摸了摸{對象.mention}的頭*",
+                description=f"{interaction.user.mention}摸了摸{對象.mention}的頭",
                 color=discord.Color(int("394162",16))
             )
             await interaction.response.send_message(embed=embed)
         elif 互動 == 3:
             embed = discord.Embed(
-                description=f"*{interaction.user.mention}蹭了蹭{對象.mention}*",
+                description=f"{interaction.user.mention}蹭了蹭{對象.mention}",
                 color=discord.Color(int("394162",16))
             )
             await interaction.response.send_message(embed=embed)
         elif 互動 == 4:
             embed = discord.Embed(
-                description=f"*{interaction.user.mention}戳了戳{對象.mention}*",
+                description=f"{interaction.user.mention}戳了戳{對象.mention}",
                 color=discord.Color(int("394162",16))
             )
             await interaction.response.send_message(embed=embed)
         elif 互動 == 5:
             embed = discord.Embed(
-                description=f"*{interaction.user.mention}親了親{對象.mention}的臉*",
+                description=f"{interaction.user.mention}親了親{對象.mention}的臉",
                 color=discord.Color(int("394162",16))
             )
             await interaction.response.send_message(embed=embed)
