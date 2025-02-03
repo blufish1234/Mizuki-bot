@@ -301,7 +301,7 @@ bot.tree.add_command(interact)
 async def chat(interaction:discord.Interaction, 內容:str):
     await interaction.response.send_message(f"*{interaction.user.mention}說：{內容}*")
     async with interaction.channel.typing():
-        await interaction.followup.send(AIChat(AIModel,內容),"\n-# 目前我還不能記住之前的聊天內容 抱歉><")
+        await interaction.followup.send(f"{AIChat(AIModel,內容)}\n-# 目前我還不能記住之前的聊天內容 抱歉><")
 bot.tree.add_command(chat)
 
 #及時AI聊天
