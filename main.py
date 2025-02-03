@@ -282,15 +282,35 @@ bot.tree.add_command(rnsfwimage)
 async def interact(interaction:discord.Interaction, 互動:int, 對象:discord.User):
     if 對象 != interaction.user:
         if 互動 == 1:
-            await interaction.response.send_message(f"*{interaction.user.mention}抱了抱{對象.mention}*")
+            embed = discord.Embed(
+                description=f"*{interaction.user.mention}抱了抱{對象.mention}*",
+                color=discord.Color(int("394162",16))
+            )
+            await interaction.response.send_message(embed=embed)
         elif 互動 == 2:
-            await interaction.response.send_message(f"*{interaction.user.mention}摸了摸{對象.mention}的頭*")
+            embed = discord.Embed(
+                description=f"*{interaction.user.mention}摸了摸{對象.mention}的頭*",
+                color=discord.Color(int("394162",16))
+            )
+            await interaction.response.send_message(embed=embed)
         elif 互動 == 3:
-            await interaction.response.send_message(f"*{interaction.user.mention}蹭了蹭{對象.mention}*")
+            embed = discord.Embed(
+                description=f"*{interaction.user.mention}蹭了蹭{對象.mention}*",
+                color=discord.Color(int("394162",16))
+            )
+            await interaction.response.send_message(embed=embed)
         elif 互動 == 4:
-            await interaction.response.send_message(f"*{interaction.user.mention}戳了戳{對象.mention}*")
+            embed = discord.Embed(
+                description=f"*{interaction.user.mention}戳了戳{對象.mention}*",
+                color=discord.Color(int("394162",16))
+            )
+            await interaction.response.send_message(embed=embed)
         elif 互動 == 5:
-            await interaction.response.send_message(f"*{interaction.user.mention}親了親{對象.mention}的臉*")
+            embed = discord.Embed(
+                description=f"*{interaction.user.mention}親了親{對象.mention}的臉*",
+                color=discord.Color(int("394162",16))
+            )
+            await interaction.response.send_message(embed=embed)
     else:
         await interaction.response.send_message("你不能和自己互動哦！", ephemeral=True)
 bot.tree.add_command(interact)
