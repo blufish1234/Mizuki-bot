@@ -50,7 +50,7 @@ def IsAdmin(guild_id, user_role_id):
     with sqlite3.connect('data.db') as conn:
         c = conn.cursor()
         c.execute('''
-            SELECT COUNT(*) FROM admin_roles 
+            SELECT COUNT(*) FROM bot_master_roles 
             WHERE guild_id = ? AND role_id = ?
         ''', (guild_id, user_role_id))
         return c.fetchone()[0] > 0
@@ -118,11 +118,11 @@ async def set_bot_master(interaction: discord.Interaction, 身份組: discord.Ro
     try:
         with sqlite3.connect('data.db') as conn:
             c = conn.cursor()
-            c.execute('''SELECT role_id FROM admin_roles WHERE guild_id = ? AND role_id = ?''', (guild_id, role_id))
+            c.execute('''SELECT role_id FROM bot_master_roles WHERE guild_id = ? AND role_id = ?''', (guild_id, role_id))
             result = c.fetchone()
 
             if result:
-                c.execute('''DELETE FROM admin_roles WHERE guild_id = ? AND role_id = ?''', (guild_id, role_id))
+                c.execute('''DELETE FROM bot_master_roles WHERE guild_id = ? AND role_id = ?''', (guild_id, role_id))
                 conn.commit()
                 embed=discord.Embed(
                     title="成功！",
@@ -131,7 +131,7 @@ async def set_bot_master(interaction: discord.Interaction, 身份組: discord.Ro
                 )
                 await interaction.response.send_message(embed=embed)
             else:
-                c.execute('''INSERT INTO admin_roles (guild_id, role_id) VALUES (?, ?)''', (guild_id, role_id))
+                c.execute('''INSERT INTO bot_master_roles (guild_id, role_id) VALUES (?, ?)''', (guild_id, role_id))
                 conn.commit()
                 embed=discord.Embed(
                     title="成功！",
@@ -299,9 +299,9 @@ bot.tree.add_command(interact)
 @app_commands.command(name="聊天", description="跟我聊天吧！")
 @app_commands.describe(內容="輸入你想對我說的話")
 async def chat(interaction:discord.Interaction, 內容:str):
-    await interaction.response.send_message(f"*{interaction.user.mention}說：{內容}*\n-# 目前我還不能記住之前的聊天內容 抱歉><")
+    await interaction.response.send_message(f"*{interaction.user.mention}說：{內容}*")
     async with interaction.channel.typing():
-        await interaction.followup.send(AIChat(AIModel,內容))
+        await interaction.followup.send(AIChat(AIModel,內容),"\n-# 目前我還不能記住之前的聊天內容 抱歉><")
 bot.tree.add_command(chat)
 
 #及時AI聊天
@@ -398,7 +398,7 @@ async def aboutme(interaction:discord.Interaction):
     #embed.set_thumbnail(url="https://cdn.discordapp.com/avatars/882626184074913280/3f2f7b9e0f8f0b0e4e6f6f3d7b4e0b7d.png")
     embed.add_field(name="開發語言",value="Python")
     embed.add_field(name="版本",value="v0.6")
-    embed.add_field(name="最後更新時間",value="2025/2/1")
+    embed.add_field(name="最後更新時間",value="2025/2/3")
     embed.add_field(name="GitHub項目地址",value="https://github.com/blufish1234/Mizuki-bot")
     await interaction.response.send_message(embed=embed)
 bot.tree.add_command(aboutme)
