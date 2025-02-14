@@ -30,7 +30,7 @@ def AIChat(model,question):
         model=model,
         frequency_penalty=0.8,
         presence_penalty=0.2,
-        max_tokens=200,
+        max_tokens=1024,
         #temperature=0.1,
         top_p=0.5,
         messages=[
