@@ -45,7 +45,7 @@ def AIChat(model,question):
     )
     return completion.choices[0].message.content
 
-AIModel = "grok-2"
+AIModel = "grok-2-latest"
 
 def IsAdmin(guild_id, user_role_id):
     with sqlite3.connect('data.db') as conn:
