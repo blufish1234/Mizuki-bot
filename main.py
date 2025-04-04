@@ -9,21 +9,21 @@ from weatherapi.rest import ApiException
 from datetime import datetime
 from openai import OpenAI
 import sqlite3
+import os
+from dotenv import load_dotenv
 
-def token():
-    with open("token.txt","r") as file:
-        token = file.read().strip()
-    return token
+load_dotenv()
+
+DiscordAPIKey = os.getenv("DISCORDAPI_TOKEN")
+XAIAPIKey = os.getenv("XAI_API_KEY")
+WeatherAPIKEY = os.getenv("WEATHERAPI_API_KEY")
+if not DiscordAPIKey or not XAIAPIKey or not WeatherAPIKEY:
+    raise ValueError("請在環境變數中設置 DISCORDAPI_TOKEN, XAI_API_KEY 和 WEATHERAPI_KEY")
 
 def AIChat(model,question):
-    def apikey():
-        with open("xaiapikey.txt","r") as file:
-            apikey = file.read().strip()
-            return apikey
-
     client = OpenAI(
         base_url="https://api.x.ai/v1",
-        api_key=apikey(),
+        api_key=XAIAPIKey,
     )
 
     completion = client.chat.completions.create(
@@ -161,13 +161,8 @@ bot.tree.add_command(ping)
 async def rtweather(interaction:discord.Interaction,地區:str):
     await interaction.response.defer()
 
-    def apikey():
-        with open("apikey.txt","r") as file:
-            apikey = file.read().strip()
-        return apikey
-
     configuration = weatherapi.Configuration()
-    configuration.api_key['key'] = apikey()
+    configuration.api_key['key'] = WeatherAPIKEY
 
     api_instance = weatherapi.APIsApi(weatherapi.ApiClient(configuration))
     q = 地區 
@@ -423,4 +418,4 @@ async def aboutme(interaction:discord.Interaction):
     await interaction.response.send_message(embed=embed)
 bot.tree.add_command(aboutme)
 
-bot.run(token())
+bot.run(DiscordAPIKey)
