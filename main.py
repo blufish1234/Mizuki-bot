@@ -16,9 +16,10 @@ load_dotenv()
 
 DiscordAPIKey = os.getenv("DISCORDAPI_TOKEN")
 XAIAPIKey = os.getenv("XAI_API_KEY")
+OpenaiAPIKey = os.getenv("OPENAI_API_KEY")
 WeatherAPIKEY = os.getenv("WEATHERAPI_API_KEY")
-if not DiscordAPIKey or not XAIAPIKey or not WeatherAPIKEY:
-    raise ValueError("請在環境變數中設置 DISCORDAPI_TOKEN, XAI_API_KEY 和 WEATHERAPI_KEY")
+if not DiscordAPIKey or not XAIAPIKey or not OpenaiAPIKey or not WeatherAPIKEY:
+    raise ValueError("請確保所有環境變數都已設置。")
 
 def AIChat(model,question):
     client = OpenAI(
