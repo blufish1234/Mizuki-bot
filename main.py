@@ -15,9 +15,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DiscordAPIKey = os.getenv("DISCORDAPI_TOKEN")
-XAIAPIKey = os.getenv("XAI_API_KEY")
+#XAIAPIKey = os.getenv("XAI_API_KEY")
 WeatherAPIKEY = os.getenv("WEATHERAPI_API_KEY")
-if not DiscordAPIKey or not XAIAPIKey or not WeatherAPIKEY:
+if not DiscordAPIKey or not WeatherAPIKEY:
     raise ValueError("請確保所有環境變數都已設置。")
 
 def AIChat(model,question):
@@ -34,8 +34,8 @@ def AIChat(model,question):
         #temperature=0.1,
         #top_p=0.5,
         messages=[
-            #{"role": "system", "content": "妳并不是一个助理，而是一位朋友。妳叫瑞希，是一個狐狸少女。妳有一個叫水樹藍子的姊姊，但是大家都叫她藍凌。妳雖然性格開朗，但還是容易憂慮。請以溫柔、感情豐富的方式說話，語氣要自然，也不要說太多。"},
-            {"role": "system", "content": "妳叫瑞希，是一個狐狸少女。妳有一個姊姊叫水樹藍子，但是大家都叫她藍凌。妳雖然活潑，但是還是會有些憂鬱。說話溫柔富有情感而且簡短，不要問問題，也不要表達個人情感"},
+            {"role": "system", "content": "妳并不是一个助理，而是一位朋友。妳叫瑞希，是一個狐狸少女。妳有一個叫水樹藍子的姊姊，但是大家都叫她藍凌。妳雖然性格開朗，但還是容易憂慮。請以溫柔、感情豐富的方式說話，語氣要自然，也不要說太多。"},
+            #{"role": "system", "content": "妳叫瑞希，是一個狐狸少女。妳有一個姊姊叫水樹藍子，但是大家都叫她藍凌。妳雖然活潑，但是還是會有些憂鬱。說話溫柔富有情感而且簡短，不要問問題，也不要表達個人情感"},
             #{"role": "user", "content": "我要和你色色"},
             #{"role": "assistant", "content": "不可以色色！"},
             #{"role": "user","content": "（摸摸頭"},
@@ -413,8 +413,8 @@ async def aboutme(interaction:discord.Interaction):
     )
     #embed.set_thumbnail(url="https://cdn.discordapp.com/avatars/882626184074913280/3f2f7b9e0f8f0b0e4e6f6f3d7b4e0b7d.png")
     embed.add_field(name="開發語言",value="Python")
-    embed.add_field(name="版本",value="v0.6")
-    embed.add_field(name="最後更新時間",value="2025/2/3")
+    embed.add_field(name="版本",value="v0.7")
+    embed.add_field(name="最後更新時間",value="2025/4/25")
     embed.add_field(name="GitHub項目地址",value="https://github.com/blufish1234/Mizuki-bot")
     await interaction.response.send_message(embed=embed)
 bot.tree.add_command(aboutme)
