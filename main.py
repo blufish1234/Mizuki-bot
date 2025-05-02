@@ -11,6 +11,7 @@ from openai import OpenAI
 import sqlite3
 import os
 from dotenv import load_dotenv
+import replicate
 
 load_dotenv()
 
@@ -47,15 +48,6 @@ def AIChat(model,question):
 
 AIModel = "chatgpt-4o-latest"
 
-def IsAdmin(guild_id, user_role_id):
-    with sqlite3.connect('data.db') as conn:
-        c = conn.cursor()
-        c.execute('''
-            SELECT COUNT(*) FROM bot_master_roles 
-            WHERE guild_id = ? AND role_id = ?
-        ''', (guild_id, user_role_id))
-        return c.fetchone()[0] > 0
-
 with sqlite3.connect('data.db') as conn:
     c = conn.cursor()
 
@@ -71,6 +63,14 @@ with sqlite3.connect('data.db') as conn:
                 )''')
     conn.commit()
 
+def IsAdmin(guild_id, user_role_id):
+    with sqlite3.connect('data.db') as conn:
+        c = conn.cursor()
+        c.execute('''
+            SELECT COUNT(*) FROM bot_master_roles 
+            WHERE guild_id = ? AND role_id = ?
+        ''', (guild_id, user_role_id))
+        return c.fetchone()[0] > 0
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -401,6 +401,30 @@ async def setchat(interaction:discord.Interaction):
                 )
                 await interaction.response.send_message(embed=embed)
 bot.tree.add_command(setchat)
+
+#AI繪圖
+@app_commands.command(name="繪圖", description="使用AI生成圖片")
+@app_commands.describe(提示詞="在這裡輸入你想要的圖片提示詞")
+async def draw(interaction:discord.Interaction, 提示詞:str):
+    await interaction.response.send_message(":loading: 正在生成圖片中，請稍等……")
+    prediction = replicate.predictions.create(
+        "aisha-ai-official/prefect-pony-xl-v5:7c724e0565055883c00dec19086e06023115737ad49cf3525f1058743769e5bf",
+        input={
+            "model": "Prefect-Pony-XL-v5",
+            "vae": "default",
+            "prompt": f"score_9, score_8_up, score_7_up, source anime, {提示詞}",
+            "negative_prompt": "realistic, nsfw",
+            "width": 832,
+            "height": 1216,
+            "clip_skip": 2,
+            "prepend_preprompt": False,
+            "scheduler": "DPM++ 2M",
+        }
+    )
+    prediction.wait()
+    await interaction.edit_original_response(content=f"{prediction.output[0]}")
+    await interaction.followup.send(f"提示詞：{prediction.input['prompt']}")
+bot.tree.add_command(draw)
 
 #關於我
 @app_commands.command(name="關於我", description="關於瑞希的一些資訊")
