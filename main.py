@@ -12,6 +12,7 @@ import sqlite3
 import os
 from dotenv import load_dotenv
 import replicate
+import asyncio
 
 load_dotenv()
 
@@ -406,7 +407,7 @@ bot.tree.add_command(setchat)
 @app_commands.command(name="繪圖", description="使用AI生成圖片")
 @app_commands.describe(提示詞="在這裡輸入你想要的圖片提示詞")
 async def draw(interaction:discord.Interaction, 提示詞:str):
-    await interaction.response.send_message(":loading: 正在生成圖片中，請稍等……")
+    await interaction .response.defer()
     prediction = replicate.predictions.create(
         "aisha-ai-official/prefect-pony-xl-v5:7c724e0565055883c00dec19086e06023115737ad49cf3525f1058743769e5bf",
         input={
@@ -421,9 +422,26 @@ async def draw(interaction:discord.Interaction, 提示詞:str):
             "scheduler": "DPM++ 2M",
         }
     )
-    prediction.wait()
-    await interaction.edit_original_response(content=f"{prediction.output[0]}")
-    await interaction.followup.send(f"提示詞：{prediction.input['prompt']}")
+
+    p = replicate.predictions.get(prediction.id)
+    while True:
+        if p.status == "succeeded":
+            embed = discord.Embed(
+                title="圖片生成完成！",
+                color=discord.Color(int("394162",16)),
+                description=f"提示詞：{p.input['prompt']}"
+            )
+            embed.set_image(url=p.output[0])
+            await interaction.followup.send(embed=embed)
+            break
+        elif p.status == "failed":
+            print("圖片生成失敗！")
+            break
+        elif p.status == "processing":
+            print("圖片生成中...")
+        elif p.status == "starting":
+            print("正在啟動模型...")
+        asyncio.sleep(1)
 bot.tree.add_command(draw)
 
 #關於我
