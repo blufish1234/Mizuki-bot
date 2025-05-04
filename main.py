@@ -11,6 +11,10 @@ from openai import OpenAI
 import sqlite3
 import os
 from dotenv import load_dotenv
+import replicate
+import asyncio
+import requests
+import io
 
 load_dotenv()
 
@@ -47,15 +51,6 @@ def AIChat(model,question):
 
 AIModel = "chatgpt-4o-latest"
 
-def IsAdmin(guild_id, user_role_id):
-    with sqlite3.connect('data.db') as conn:
-        c = conn.cursor()
-        c.execute('''
-            SELECT COUNT(*) FROM bot_master_roles 
-            WHERE guild_id = ? AND role_id = ?
-        ''', (guild_id, user_role_id))
-        return c.fetchone()[0] > 0
-
 with sqlite3.connect('data.db') as conn:
     c = conn.cursor()
 
@@ -71,6 +66,14 @@ with sqlite3.connect('data.db') as conn:
                 )''')
     conn.commit()
 
+def IsAdmin(guild_id, user_role_id):
+    with sqlite3.connect('data.db') as conn:
+        c = conn.cursor()
+        c.execute('''
+            SELECT COUNT(*) FROM bot_master_roles 
+            WHERE guild_id = ? AND role_id = ?
+        ''', (guild_id, user_role_id))
+        return c.fetchone()[0] > 0
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -402,6 +405,73 @@ async def setchat(interaction:discord.Interaction):
                 await interaction.response.send_message(embed=embed)
 bot.tree.add_command(setchat)
 
+#AI繪圖
+@app_commands.command(name="繪圖", description="使用AI生成圖片")
+@app_commands.describe(提示詞="在這裡輸入你想要的圖片提示詞")
+async def draw(interaction:discord.Interaction, 提示詞:str):
+    await interaction.response.defer()
+    prediction = replicate.predictions.create(
+        "aisha-ai-official/prefect-pony-xl-v5:7c724e0565055883c00dec19086e06023115737ad49cf3525f1058743769e5bf",
+        input={
+            "model": "Prefect-Pony-XL-v5",
+            "vae": "default",
+            "prompt": f"score_9, score_8_up, score_7_up, {提示詞}",
+            "negative_prompt": "realistic, nsfw",
+            "width": 832,
+            "height": 1216,
+            "clip_skip": 2,
+            "prepend_preprompt": False,
+            "scheduler": "DPM++ 2M",
+        }
+    )
+    await interaction.followup.send("請求已發送")
+    prediction_status =""
+    while True:
+        p = replicate.predictions.get(prediction.id)
+        if p.status == "succeeded":
+            image_url = p.output[0]
+            image_content = requests.get(image_url)
+            if image_content.status_code == 200:
+                image_data = io.BytesIO(image_content.content)
+                image = discord.File(image_data, filename="image.png")
+                embed = discord.Embed(
+                    color=discord.Color(int("394162",16)),
+                )
+                embed.set_image(url="attachment://image.png")
+                embed.add_field(name="提示詞",value=f"{p.input['prompt']}")
+                await interaction.edit_original_response(embed=embed,attachments=[image],content="")
+            else:
+                embed = discord.Embed(
+                    color=discord.Color.red(),
+                )
+                embed.add_field(name="<:x:>圖片生成失敗！",value="無法獲取圖片，請稍後再試。")
+                await interaction.edit_original_response(embed=embed)
+            break
+        elif p.status == "failed":
+            error_message = str(p.error)
+            embed = discord.Embed(
+                color=discord.Color.red(),
+            )
+            embed.add_field(name="<:x:>圖片生成失敗！",value=error_message)
+            await interaction.edit_original_response(embed=embed,content="")
+            break
+        elif p.status == "processing" and prediction_status != "processing":
+            prediction_status = "processing"
+            embed = discord.Embed(
+                color=discord.Color.yellow(),
+            )
+            embed.add_field(name="",value="<a:loading:1367874034368254092> 正在生成圖片……")
+            await interaction.edit_original_response(embed=embed,content="")
+        elif p.status == "starting" and prediction_status != "starting":
+            prediction_status = "starting"
+            embed = discord.Embed(
+                color=discord.Color.yellow(),
+            )
+            embed.add_field(name="",value="<a:loading:1367874034368254092> 正在啟動模型……")
+            await interaction.edit_original_response(embed=embed,content="")
+        await asyncio.sleep(1)
+bot.tree.add_command(draw)
+
 #關於我
 @app_commands.command(name="關於我", description="關於瑞希的一些資訊")
 async def aboutme(interaction:discord.Interaction):
@@ -413,8 +483,8 @@ async def aboutme(interaction:discord.Interaction):
     )
     #embed.set_thumbnail(url="https://cdn.discordapp.com/avatars/882626184074913280/3f2f7b9e0f8f0b0e4e6f6f3d7b4e0b7d.png")
     embed.add_field(name="開發語言",value="Python")
-    embed.add_field(name="版本",value="v0.7")
-    embed.add_field(name="最後更新時間",value="2025/4/25")
+    embed.add_field(name="版本",value="v0.8")
+    embed.add_field(name="最後更新時間",value="2025/5/4")
     embed.add_field(name="GitHub項目地址",value="https://github.com/blufish1234/Mizuki-bot")
     await interaction.response.send_message(embed=embed)
 bot.tree.add_command(aboutme)
