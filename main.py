@@ -408,22 +408,47 @@ bot.tree.add_command(setchat)
 #AI繪圖
 @app_commands.command(name="繪圖", description="使用AI生成圖片")
 @app_commands.describe(提示詞="在這裡輸入你想要的圖片提示詞")
-async def draw(interaction:discord.Interaction, 提示詞:str):
+@app_commands.describe(模型="選擇你想要的模型")
+@app_commands.choices(模型=[
+    app_commands.Choice(name="Prefect-Pony-XL-v5", value=1),
+    app_commands.Choice(name="Animagine-XL-v4-Opt", value=2),
+])
+async def draw(interaction:discord.Interaction, 提示詞:str, 模型:app_commands.Choice[int]):
     await interaction.response.defer()
-    prediction = replicate.predictions.create(
-        "aisha-ai-official/prefect-pony-xl-v5:7c724e0565055883c00dec19086e06023115737ad49cf3525f1058743769e5bf",
-        input={
-            "model": "Prefect-Pony-XL-v5",
-            "vae": "default",
-            "prompt": f"score_9, score_8_up, score_7_up, {提示詞}",
-            "negative_prompt": "realistic, nsfw",
-            "width": 832,
-            "height": 1216,
-            "clip_skip": 2,
-            "prepend_preprompt": False,
-            "scheduler": "DPM++ 2M",
-        }
-    )
+    if 模型.value == 1:
+        prediction = replicate.predictions.create(
+            "aisha-ai-official/prefect-pony-xl-v5:7c724e0565055883c00dec19086e06023115737ad49cf3525f1058743769e5bf",
+            input={
+                "model": "Prefect-Pony-XL-v5",
+                "vae": "default",
+                "prompt": f"score_9, score_8_up, score_7_up, {提示詞}",
+                "negative_prompt": "realistic, nsfw",
+                "cfg_scale": 7,
+                "width": 832,
+                "height": 1216,
+                "clip_skip": 2,
+                "prepend_preprompt": False,
+                "scheduler": "DPM++ 2M Karras",
+            }
+        )
+    elif 模型.value == 2:
+        prediction = replicate.predictions.create(
+            "aisha-ai-official/animagine-xl-v4-opt:cfd0f86fbcd03df45fca7ce83af9bb9c07850a3317303fe8dcf677038541db8a",
+            input={
+                "model": "Animagine-XL-v4-Opt",
+                "vae": "default",
+                "prompt": f"{提示詞}, masterpiece, high score, great score, absurdres",
+                "negative_prompt": "lowres, bad anatomy, bad hands, text, error, missing finger, extra digits, fewer digits, cropped, worst quality, low quality, low score, bad score, average score, signature, watermark, username, blurry",
+                "width": 832,
+                "height": 1216,
+                "steps": 28,
+                "pag_scale": 0,
+                "cfg_scale": 5,
+                "clip_skip": 2,
+                "prepend_preprompt": False,
+                "scheduler": "Euler a",
+            }
+        )
     await interaction.followup.send("請求已發送")
     prediction_status =""
     while True:
@@ -438,6 +463,7 @@ async def draw(interaction:discord.Interaction, 提示詞:str):
                     color=discord.Color(int("394162",16)),
                 )
                 embed.set_image(url="attachment://image.png")
+                embed.add_field(name="模型",value=f"{p.input['model']}")
                 embed.add_field(name="提示詞",value=f"{p.input['prompt']}")
                 await interaction.edit_original_response(embed=embed,attachments=[image],content="")
             else:
@@ -445,7 +471,7 @@ async def draw(interaction:discord.Interaction, 提示詞:str):
                     color=discord.Color.red(),
                 )
                 embed.add_field(name="<:x:>圖片生成失敗！",value="無法獲取圖片，請稍後再試。")
-                await interaction.edit_original_response(embed=embed)
+                await interaction.edit_original_response(embed=embed,content="")
             break
         elif p.status == "failed":
             error_message = str(p.error)
@@ -467,9 +493,9 @@ async def draw(interaction:discord.Interaction, 提示詞:str):
             embed = discord.Embed(
                 color=discord.Color.yellow(),
             )
-            embed.add_field(name="",value="<a:loading:1367874034368254092> 正在啟動模型……")
+            embed.add_field(name="",value="<a:loading:1367874034368254092> 正在初始化……")
             await interaction.edit_original_response(embed=embed,content="")
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.5)
 bot.tree.add_command(draw)
 
 #關於我
