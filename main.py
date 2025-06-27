@@ -51,6 +51,29 @@ def AIChat(model,question):
 
 AIModel = "chatgpt-4o-latest"
 
+def AITranslateJpZht(text):
+    client = OpenAI()
+    response = client.responses.create(
+        prompt={
+            "id": "pmpt_685d33790e648193a4ea62fe73ee57c00eb21ac9521b57b2"
+        },
+        input=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "input_text",
+                        "text": text
+                    }
+                ]
+            }
+        ],
+        reasoning={},
+        max_output_tokens=2048,
+        store=False
+    )
+    return response.output_text
+
 with sqlite3.connect('data.db') as conn:
     c = conn.cursor()
 
@@ -498,6 +521,15 @@ async def draw(interaction:discord.Interaction, 提示詞:str, 模型:app_comman
         await asyncio.sleep(0.5)
 bot.tree.add_command(draw)
 
+#中日翻譯
+@app_commands.command(name="中日翻譯", description="將中文翻譯成日文，或將日文翻譯成中文")
+@app_commands.describe(內容="輸入你想要翻譯的中文或日文")
+async def translate(interaction:discord.Interaction, 內容:str):
+    await interaction.response.defer(ephemeral=isinstance(interaction.channel, discord.TextChannel))
+    response = f"```\n{內容}\n```\n{AITranslateJpZht(內容)}"
+    await interaction.followup.send(response, ephemeral=isinstance(interaction.channel, discord.TextChannel))
+bot.tree.add_command(translate)
+
 #關於我
 @app_commands.command(name="關於我", description="關於瑞希的一些資訊")
 async def aboutme(interaction:discord.Interaction):
@@ -509,8 +541,8 @@ async def aboutme(interaction:discord.Interaction):
     )
     #embed.set_thumbnail(url="https://cdn.discordapp.com/avatars/882626184074913280/3f2f7b9e0f8f0b0e4e6f6f3d7b4e0b7d.png")
     embed.add_field(name="開發語言",value="Python")
-    embed.add_field(name="版本",value="v0.8")
-    embed.add_field(name="最後更新時間",value="2025/5/4")
+    embed.add_field(name="版本",value="v0.9")
+    embed.add_field(name="最後更新時間",value="2025/6/27")
     embed.add_field(name="GitHub項目地址",value="https://github.com/blufish1234/Mizuki-bot")
     await interaction.response.send_message(embed=embed)
 bot.tree.add_command(aboutme)
