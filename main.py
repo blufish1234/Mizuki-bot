@@ -51,6 +51,29 @@ def AIChat(model,question):
 
 AIModel = "chatgpt-4o-latest"
 
+def AITranslateJpZht(text):
+    client = OpenAI()
+    response = client.responses.create(
+        prompt={
+            "id": "pmpt_685d33790e648193a4ea62fe73ee57c00eb21ac9521b57b2"
+        },
+        input=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "input_text",
+                        "text": text
+                    }
+                ]
+            }
+        ],
+        reasoning={},
+        max_output_tokens=2048,
+        store=False
+    )
+    return response.output_text
+
 with sqlite3.connect('data.db') as conn:
     c = conn.cursor()
 
@@ -408,22 +431,47 @@ bot.tree.add_command(setchat)
 #AI繪圖
 @app_commands.command(name="繪圖", description="使用AI生成圖片")
 @app_commands.describe(提示詞="在這裡輸入你想要的圖片提示詞")
-async def draw(interaction:discord.Interaction, 提示詞:str):
+@app_commands.describe(模型="選擇你想要的模型")
+@app_commands.choices(模型=[
+    app_commands.Choice(name="Prefect-Pony-XL-v5", value=1),
+    app_commands.Choice(name="Animagine-XL-v4-Opt", value=2),
+])
+async def draw(interaction:discord.Interaction, 提示詞:str, 模型:app_commands.Choice[int]):
     await interaction.response.defer()
-    prediction = replicate.predictions.create(
-        "aisha-ai-official/prefect-pony-xl-v5:7c724e0565055883c00dec19086e06023115737ad49cf3525f1058743769e5bf",
-        input={
-            "model": "Prefect-Pony-XL-v5",
-            "vae": "default",
-            "prompt": f"score_9, score_8_up, score_7_up, {提示詞}",
-            "negative_prompt": "realistic, nsfw",
-            "width": 832,
-            "height": 1216,
-            "clip_skip": 2,
-            "prepend_preprompt": False,
-            "scheduler": "DPM++ 2M",
-        }
-    )
+    if 模型.value == 1:
+        prediction = replicate.predictions.create(
+            "aisha-ai-official/prefect-pony-xl-v5:7c724e0565055883c00dec19086e06023115737ad49cf3525f1058743769e5bf",
+            input={
+                "model": "Prefect-Pony-XL-v5",
+                "vae": "default",
+                "prompt": f"score_9, score_8_up, score_7_up, {提示詞}",
+                "negative_prompt": "realistic, nsfw",
+                "cfg_scale": 7,
+                "width": 832,
+                "height": 1216,
+                "clip_skip": 2,
+                "prepend_preprompt": False,
+                "scheduler": "DPM++ 2M Karras",
+            }
+        )
+    elif 模型.value == 2:
+        prediction = replicate.predictions.create(
+            "aisha-ai-official/animagine-xl-v4-opt:cfd0f86fbcd03df45fca7ce83af9bb9c07850a3317303fe8dcf677038541db8a",
+            input={
+                "model": "Animagine-XL-v4-Opt",
+                "vae": "default",
+                "prompt": f"{提示詞}, masterpiece, high score, great score, absurdres",
+                "negative_prompt": "lowres, bad anatomy, bad hands, text, error, missing finger, extra digits, fewer digits, cropped, worst quality, low quality, low score, bad score, average score, signature, watermark, username, blurry",
+                "width": 832,
+                "height": 1216,
+                "steps": 28,
+                "pag_scale": 0,
+                "cfg_scale": 5,
+                "clip_skip": 2,
+                "prepend_preprompt": False,
+                "scheduler": "Euler a",
+            }
+        )
     await interaction.followup.send("請求已發送")
     prediction_status =""
     while True:
@@ -438,6 +486,7 @@ async def draw(interaction:discord.Interaction, 提示詞:str):
                     color=discord.Color(int("394162",16)),
                 )
                 embed.set_image(url="attachment://image.png")
+                embed.add_field(name="模型",value=f"{p.input['model']}")
                 embed.add_field(name="提示詞",value=f"{p.input['prompt']}")
                 await interaction.edit_original_response(embed=embed,attachments=[image],content="")
             else:
@@ -445,7 +494,7 @@ async def draw(interaction:discord.Interaction, 提示詞:str):
                     color=discord.Color.red(),
                 )
                 embed.add_field(name="<:x:>圖片生成失敗！",value="無法獲取圖片，請稍後再試。")
-                await interaction.edit_original_response(embed=embed)
+                await interaction.edit_original_response(embed=embed,content="")
             break
         elif p.status == "failed":
             error_message = str(p.error)
@@ -467,10 +516,19 @@ async def draw(interaction:discord.Interaction, 提示詞:str):
             embed = discord.Embed(
                 color=discord.Color.yellow(),
             )
-            embed.add_field(name="",value="<a:loading:1367874034368254092> 正在啟動模型……")
+            embed.add_field(name="",value="<a:loading:1367874034368254092> 正在初始化……")
             await interaction.edit_original_response(embed=embed,content="")
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.5)
 bot.tree.add_command(draw)
+
+#中日翻譯
+@app_commands.command(name="中日翻譯", description="將中文翻譯成日文，或將日文翻譯成中文")
+@app_commands.describe(內容="輸入你想要翻譯的中文或日文")
+async def translate(interaction:discord.Interaction, 內容:str):
+    await interaction.response.defer(ephemeral=isinstance(interaction.channel, discord.TextChannel))
+    response = f"```\n{內容}\n```\n{AITranslateJpZht(內容)}"
+    await interaction.followup.send(response, ephemeral=isinstance(interaction.channel, discord.TextChannel))
+bot.tree.add_command(translate)
 
 #關於我
 @app_commands.command(name="關於我", description="關於瑞希的一些資訊")
@@ -483,8 +541,8 @@ async def aboutme(interaction:discord.Interaction):
     )
     #embed.set_thumbnail(url="https://cdn.discordapp.com/avatars/882626184074913280/3f2f7b9e0f8f0b0e4e6f6f3d7b4e0b7d.png")
     embed.add_field(name="開發語言",value="Python")
-    embed.add_field(name="版本",value="v0.8")
-    embed.add_field(name="最後更新時間",value="2025/5/4")
+    embed.add_field(name="版本",value="v0.9")
+    embed.add_field(name="最後更新時間",value="2025/6/27")
     embed.add_field(name="GitHub項目地址",value="https://github.com/blufish1234/Mizuki-bot")
     await interaction.response.send_message(embed=embed)
 bot.tree.add_command(aboutme)
