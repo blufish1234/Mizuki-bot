@@ -12,8 +12,7 @@ from dotenv import load_dotenv
 from enum import IntEnum
 import replicate
 import asyncio
-import requests
-import io
+from .logger import logger, InterceptHandler
 
 from . import db, ai
 from .user import if_user_is_administrator, if_not_in_dm
@@ -40,19 +39,19 @@ bot = commands.Bot(command_prefix="*", intents=intents)
 
 @bot.event
 async def on_ready():
+    logger.debug("Setting up database")
     await db.setup()
 
-    print("Setup database")
-
-    print(f"Logged in as {bot.user}.")
+    logger.info("Logged in as {}.", bot.user)
 
     await bot.change_presence(
         status=discord.Status.idle,
         activity=discord.CustomActivity(name="想要學會更多技能><"),
     )
     await bot.tree.sync()
-    print(f"Synced commands for {bot.user}.")
-    print("Initialization complete.")
+
+    logger.info("Synced commands for {}.", bot.user)
+    logger.success("Initialization complete.")
 
 
 # 設定機器人管理員
@@ -310,7 +309,7 @@ async def on_message(message: discord.Message):
                 f"{ai.Chat(AIModel, message.content)}\n-# 目前我還不能記住之前的聊天內容 抱歉><"
             )
     else:
-        async with db.execute(
+        async with db.execute_ctx(
             "SELECT channel_id FROM AIChat_channels WHERE guild_id = ?",
             (message.guild.id,),
         ) as c:
@@ -433,9 +432,12 @@ async def draw(interaction: discord.Interaction, prompt: str, model: DrawModel):
                             color=discord.Color.red(),
                         )
                         embed.add_field(
-                            name="<:x:>圖片生成失敗！", value="無法獲取圖片，請稍後再試。"
+                            name="<:x:>圖片生成失敗！",
+                            value="無法獲取圖片，請稍後再試。",
                         )
-                        await interaction.edit_original_response(embed=embed, content="")
+                        await interaction.edit_original_response(
+                            embed=embed, content=""
+                        )
                         break
                     image_data = await image_resp.read()
                     image = discord.File(image_data, filename="image.png")
@@ -511,4 +513,9 @@ async def aboutme(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed)
 
 
-bot.run(DiscordAPIKey)
+def main():
+    bot.run(DiscordAPIKey, log_handler=InterceptHandler())
+
+
+if __name__ == "__main__":
+    main()
