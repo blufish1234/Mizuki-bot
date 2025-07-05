@@ -43,7 +43,9 @@ charset-normalizer==3.4.2
     #   mizuki-bot
     #   requests
 colorama==0.4.6 ; sys_platform == 'win32'
-    # via tqdm
+    # via
+    #   loguru
+    #   tqdm
 discord-py==2.5.2
     # via mizuki-bot
 distro==1.9.0
@@ -79,6 +81,8 @@ jiter==0.10.0
     # via
     #   mizuki-bot
     #   openai
+loguru==0.7.3
+    # via mizuki-bot
 multidict==6.5.1
     # via
     #   aiohttp
@@ -162,6 +166,8 @@ weatherapipython @ git+https://github.com/weatherapicom/python.git@05344f2d04cbf
     # via mizuki-bot
 webuiapi==0.9.17
     # via mizuki-bot
+win32-setctime==1.2.0 ; sys_platform == 'win32'
+    # via loguru
 yarl==1.20.1
     # via
     #   aiohttp
