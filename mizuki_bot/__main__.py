@@ -6,7 +6,6 @@ from http import HTTPStatus
 import weatherapi
 from weatherapi.rest import ApiException
 from datetime import datetime
-import sqlite3
 import os
 from dotenv import load_dotenv
 from enum import IntEnum
@@ -14,8 +13,7 @@ import replicate
 import asyncio
 from .logger import logger, InterceptHandler
 
-from . import db, ai
-from .user import if_user_is_administrator, if_not_in_dm
+from . import db, ai, user
 
 load_dotenv()
 
@@ -60,9 +58,24 @@ async def on_ready():
 )
 @app_commands.rename(role="身份組")
 @app_commands.describe(role="選擇管理員身份組")
-@if_not_in_dm()
-@if_user_is_administrator()
 async def set_bot_master(interaction: discord.Interaction, role: discord.Role):
+    if not interaction.guild:
+        embed = discord.Embed(
+            title="錯誤！",
+            description="這個指令只能在伺服器頻道中使用！",
+            color=discord.Color.red(),
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
+    if not interaction.user.guild_permissions.administrator:
+        embed = discord.Embed(
+            title="權限不足！",
+            description="你需要伺服器管理員權限才能使用這個指令。",
+            color=discord.Color.red(),
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
+    
     guild_id = interaction.guild.id
     role_id = role.id
 
@@ -97,7 +110,7 @@ async def set_bot_master(interaction: discord.Interaction, role: discord.Role):
                     color=discord.Color.green(),
                 )
                 await interaction.response.send_message(embed=embed)
-    except sqlite3.Error as e:
+    except await db.Err as e:
         embed = discord.Embed(
             title="出錯了！",
             description=f"無法設置管理員身份組: `{e}`",
@@ -327,9 +340,33 @@ async def on_message(message: discord.Message):
     name="設置聊天頻道",
     description="（機器人管理員限定）將目前的頻道設置為AI聊天的頻道，再次執行指令以移除頻道。",
 )
-@if_not_in_dm()
-@if_user_is_administrator()
 async def setchat(interaction: discord.Interaction):
+    if not interaction.guild:
+        embed = discord.Embed(
+            title="錯誤！",
+            description="這個指令只能在伺服器頻道中使用！",
+            color=discord.Color.red(),
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
+    try:
+        if not await user.IsBotMaster(interaction.guild.id, interaction.user.id) or not interaction.user.guild_permissions.administrator:
+            embed = discord.Embed(
+                title="權限不足！",
+                description="你需要管理員或機器人管理員身份組才能使用這個指令。",
+                color=discord.Color.red(),
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+    except db.Err as e:
+        embed = discord.Embed(
+            title="出錯了！",
+            description=f"無法檢查權限: `{e}`",
+            color=discord.Color.red(),
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
+    
     async with db.execute_ctx(
         "SELECT channel_id FROM AIChat_channels WHERE guild_id = ?",
         (interaction.guild.id,),

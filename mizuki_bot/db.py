@@ -8,6 +8,8 @@ if TYPE_CHECKING:
 
 import aiosqlite
 
+Err = aiosqlite.Error
+
 db: Optional[aiosqlite.Connection] = None
 
 
