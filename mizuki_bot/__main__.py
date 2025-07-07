@@ -352,7 +352,7 @@ async def setchat(interaction: discord.Interaction):
     try:
         if (
             not await user.IsBotMaster(interaction.guild.id, interaction.user.id)
-            or not interaction.user.guild_permissions.administrator
+            and not interaction.user.guild_permissions.administrator
         ):
             embed = discord.Embed(
                 title="權限不足！",
