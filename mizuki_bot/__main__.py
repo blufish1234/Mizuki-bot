@@ -75,7 +75,7 @@ async def set_bot_master(interaction: discord.Interaction, role: discord.Role):
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
         return
-    
+
     guild_id = interaction.guild.id
     role_id = role.id
 
@@ -350,7 +350,10 @@ async def setchat(interaction: discord.Interaction):
         await interaction.response.send_message(embed=embed, ephemeral=True)
         return
     try:
-        if not await user.IsBotMaster(interaction.guild.id, interaction.user.id) or not interaction.user.guild_permissions.administrator:
+        if (
+            not await user.IsBotMaster(interaction.guild.id, interaction.user.id)
+            or not interaction.user.guild_permissions.administrator
+        ):
             embed = discord.Embed(
                 title="權限不足！",
                 description="你需要管理員或機器人管理員身份組才能使用這個指令。",
@@ -366,7 +369,7 @@ async def setchat(interaction: discord.Interaction):
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
         return
-    
+
     async with db.execute_ctx(
         "SELECT channel_id FROM AIChat_channels WHERE guild_id = ?",
         (interaction.guild.id,),
@@ -375,11 +378,11 @@ async def setchat(interaction: discord.Interaction):
 
         if interaction.channel.id not in allowed_channels:
             try:
-                c.execute(
+                await c.execute(
                     "INSERT OR REPLACE INTO AIChat_channels (guild_id, channel_id) VALUES (?, ?)",
                     (interaction.guild.id, interaction.channel.id),
                 )
-                await c.commit()
+                await db.commit()
                 embed = discord.Embed(
                     title="設置成功!",
                     description=f"瑞希將會回覆在{interaction.channel.mention}中的聊天內容",
@@ -397,7 +400,7 @@ async def setchat(interaction: discord.Interaction):
                     "DELETE FROM AIChat_channels WHERE guild_id = ? AND channel_id = ?",
                     (interaction.guild.id, interaction.channel.id),
                 )
-                await c.commit()
+                await db.commit()
                 embed = discord.Embed(
                     title="移除成功!",
                     description=f"瑞希將不再回覆在{interaction.channel.mention}中的聊天內容",

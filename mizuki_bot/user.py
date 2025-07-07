@@ -1,5 +1,6 @@
 from . import db
 
+
 async def IsBotMaster(guild_id, user_role_id) -> bool:
     async with db.execute_ctx(
         """
@@ -8,4 +9,4 @@ async def IsBotMaster(guild_id, user_role_id) -> bool:
         """,
         (guild_id, user_role_id),
     ) as c:
-          return (await c.fetchone())[0] > 0
+        return (await c.fetchone())[0] > 0
