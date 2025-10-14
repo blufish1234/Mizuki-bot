@@ -523,12 +523,15 @@ async def draw(interaction: discord.Interaction, prompt: str, model: DrawModel):
 # 中日翻譯
 
 async def translate(interaction: discord.Interaction, text: str):
+    ctx = interaction.context
+    is_ephermeral = ctx != app_commands.AppCommandContext.dm_channel
+
     await interaction.response.defer(
-        ephemeral=isinstance(interaction.channel, discord.TextChannel)
+        ephemeral=is_ephermeral
     )
     response = f"```\n{text}\n```\n{ai.TranslateJpZht(text)}"
     await interaction.followup.send(
-        response, ephemeral=isinstance(interaction.channel, discord.TextChannel)
+        response, ephemeral=is_ephermeral
     )
 
 @bot.tree.command(name="中日翻譯", description="將中文翻譯成日文，或將日文翻譯成中文")
