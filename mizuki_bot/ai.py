@@ -33,7 +33,7 @@ def Chat(model, question):
 def TranslateJpZht(text):
     client = OpenAI()
     response = client.responses.create(
-        prompt={"id": "pmpt_685be67f0e8c81908f81736a2d643aae0181f3999dc9e63f"},
+        prompt={"id": "pmpt_685d33790e648193a4ea62fe73ee57c00eb21ac9521b57b2"},
         input=[{"role": "user", "content": [{"type": "input_text", "text": text}]}],
         reasoning={},
         max_output_tokens=2048,
