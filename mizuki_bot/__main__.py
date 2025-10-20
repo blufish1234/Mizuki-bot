@@ -522,10 +522,10 @@ async def draw(interaction: discord.Interaction, prompt: str, model: DrawModel):
 
 # 中日翻譯
 
-async def translate(interaction: discord.Interaction, text: str):
+async def translate(interaction: discord.Interaction, text: str, IsCtxMenu: bool):
     is_ephermeral = not (
         isinstance(interaction.channel, discord.DMChannel)
-    )
+    ) or IsCtxMenu
     await interaction.response.defer(
         ephemeral=is_ephermeral
     )
@@ -538,13 +538,13 @@ async def translate(interaction: discord.Interaction, text: str):
 @app_commands.rename(content="內容")
 @app_commands.describe(content="輸入你想要翻譯的中文或日文")
 async def translate_cmd(interaction: discord.Interaction, content: str):
-    await translate(interaction, content)
+    await translate(interaction, content, False)
 
 @bot.tree.context_menu(name="中日翻譯")
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 async def translate_ctx_menu(interaction: discord.Interaction, message: discord.Message):
-    await translate(interaction, message.content)
+    await translate(interaction, message.content, True)
 
 # 關於我
 @bot.tree.command(name="關於我", description="關於瑞希的一些資訊")
