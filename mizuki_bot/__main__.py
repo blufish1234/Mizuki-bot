@@ -523,9 +523,9 @@ async def draw(interaction: discord.Interaction, prompt: str, model: DrawModel):
 # 中日翻譯
 
 async def translate(interaction: discord.Interaction, text: str):
-    ctx = interaction.context
-    is_ephermeral = ctx != app_commands.AppCommandContext.dm_channel
-
+    is_ephermeral = not (
+        isinstance(interaction.channel, discord.DMChannel)
+    )
     await interaction.response.defer(
         ephemeral=is_ephermeral
     )
@@ -541,6 +541,8 @@ async def translate_cmd(interaction: discord.Interaction, content: str):
     await translate(interaction, content)
 
 @bot.tree.context_menu(name="中日翻譯")
+@app_commands.allowed_installs(guilds=True, users=True)
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 async def translate_ctx_menu(interaction: discord.Interaction, message: discord.Message):
     await translate(interaction, message.content)
 
