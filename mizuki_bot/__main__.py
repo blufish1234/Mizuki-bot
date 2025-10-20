@@ -49,7 +49,7 @@ async def on_ready():
     await bot.tree.sync()
 
     logger.info("Synced commands for {}.", bot.user)
-    logger.success("Initialization complete.")
+    print("Initialization complete.")
 
 
 # 設定機器人管理員
