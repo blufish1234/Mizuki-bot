@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 from enum import IntEnum
 import replicate
 import asyncio
+import io
 from .logger import logger, InterceptHandler
 
 from . import db, ai, user
@@ -258,7 +259,14 @@ class InteractAction(IntEnum):
 
 # 互動指令
 @bot.tree.command(name="互動", description="用這個指令來和朋友們互動吧~")
-@app_commands.rename(action="互動", target="對象")
+@app_commands.rename(action="動作", target="對象")
+@app_commands.choices(action=[
+    app_commands.Choice(name="抱抱", value=1),
+    app_commands.Choice(name="摸頭", value=2),
+    app_commands.Choice(name="蹭蹭", value=3),
+    app_commands.Choice(name="戳戳", value=4),
+    app_commands.Choice(name="親親", value=5)
+])
 async def interact(
     interaction: discord.Interaction, action: InteractAction, target: discord.User
 ):
@@ -418,13 +426,34 @@ class DrawModel(IntEnum):
     Prefect_Pony_XL_v5 = 1
     Animagine_XL_v4_Opt = 2
 
+class Orientation(IntEnum):
+    Portrait = 1
+    Landscape = 2
+    Square = 3
+
 
 # AI繪圖
 @bot.tree.command(name="繪圖", description="使用AI生成圖片")
-@app_commands.rename(prompt="提示詞", model="模型")
+@app_commands.rename(prompt="提示詞", model="模型", orientation="畫面比例")
 @app_commands.describe(prompt="在這裡輸入你想要的圖片提示詞")
-async def draw(interaction: discord.Interaction, prompt: str, model: DrawModel):
+@app_commands.choices(
+    orientation=[
+        app_commands.Choice(name="2:3", value=1),
+        app_commands.Choice(name="3:2", value=2),
+        app_commands.Choice(name="1:1", value=3),
+    ]
+)
+async def draw(interaction: discord.Interaction, prompt: str, model: DrawModel, orientation: Orientation):
     await interaction.response.defer()
+    if orientation.value == Orientation.Portrait:
+        width = 832
+        height = 1216
+    elif orientation.value == Orientation.Landscape:
+        width = 1216
+        height = 832
+    else:  # Square
+        width = 1024
+        height = 1024
     if model.value == DrawModel.Prefect_Pony_XL_v5:
         prediction = replicate.predictions.create(
             "aisha-ai-official/prefect-pony-xl-v5:7c724e0565055883c00dec19086e06023115737ad49cf3525f1058743769e5bf",
@@ -434,8 +463,8 @@ async def draw(interaction: discord.Interaction, prompt: str, model: DrawModel):
                 "prompt": f"score_9, score_8_up, score_7_up, {prompt}",
                 "negative_prompt": "realistic, nsfw",
                 "cfg_scale": 7,
-                "width": 832,
-                "height": 1216,
+                "width": width,
+                "height": height,
                 "clip_skip": 2,
                 "prepend_preprompt": False,
                 "scheduler": "DPM++ 2M Karras",
@@ -449,8 +478,8 @@ async def draw(interaction: discord.Interaction, prompt: str, model: DrawModel):
                 "vae": "default",
                 "prompt": f"{prompt}, masterpiece, high score, great score, absurdres",
                 "negative_prompt": "lowres, bad anatomy, bad hands, text, error, missing finger, extra digits, fewer digits, cropped, worst quality, low quality, low score, bad score, average score, signature, watermark, username, blurry",
-                "width": 832,
-                "height": 1216,
+                "width": width,
+                "height": height,
                 "steps": 28,
                 "pag_scale": 0,
                 "cfg_scale": 5,
@@ -480,7 +509,7 @@ async def draw(interaction: discord.Interaction, prompt: str, model: DrawModel):
                         )
                         break
                     image_data = await image_resp.read()
-                    image = discord.File(image_data, filename="image.png")
+                    image = discord.File(io.BytesIO(image_data), filename="image.png")
                     embed = discord.Embed(
                         color=discord.Color(int("394162", 16)),
                     )
