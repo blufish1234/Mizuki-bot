@@ -50,7 +50,7 @@ class Weather(commands.Cog):
 
             embed = discord.Embed(
                 title=f"{location}, {region}, {country}的實時天氣",
-                color=discord.Color(int("394162", 16)),
+                color=discord.Color(int("2A324B", 16)),
                 timestamp=datetime.fromtimestamp(lastupdated),
             )
             embed.set_thumbnail(url=f"https:{weather_icon}")

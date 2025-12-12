@@ -74,7 +74,7 @@ class Utility(commands.Cog):
     async def aboutme(self, interaction: discord.Interaction):
         embed = discord.Embed(
             title="關於瑞希",
-            color=discord.Color(int("394162", 16)),
+            color=discord.Color(int("2A324B", 16)),
             description="嗨！我是瑞希！\n是藍凌自己做的機器人哦！。\n我目前還在開發中，所以可能會有一些問題。\n如果有任何問題或建議，歡迎聯絡我的主人哦！",
             timestamp=datetime.now(),
         )

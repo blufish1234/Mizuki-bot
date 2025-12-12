@@ -233,7 +233,7 @@ class AI(commands.Cog):
                         image_data = await image_resp.read()
                         image = discord.File(io.BytesIO(image_data), filename="image.png")
                         embed = discord.Embed(
-                            color=discord.Color(int("394162", 16)),
+                            color=discord.Color(int("2A324B", 16)),
                         )
                         embed.set_image(url="attachment://image.png")
                         embed.add_field(name="模型", value=f"{p.input['model']}")

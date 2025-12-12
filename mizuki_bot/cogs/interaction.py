@@ -31,31 +31,31 @@ class Interaction(commands.Cog):
             if action == InteractAction.hug:
                 embed = discord.Embed(
                     description=f"{interaction.user.mention}抱了抱{target.mention}",
-                    color=discord.Color(int("394162", 16)),
+                    color=discord.Color(int("2A324B", 16)),
                 )
                 await interaction.response.send_message(embed=embed)
             elif action == InteractAction.touch:
                 embed = discord.Embed(
                     description=f"{interaction.user.mention}摸了摸{target.mention}的頭",
-                    color=discord.Color(int("394162", 16)),
+                    color=discord.Color(int("2A324B", 16)),
                 )
                 await interaction.response.send_message(embed=embed)
             elif action == InteractAction.rub:
                 embed = discord.Embed(
                     description=f"{interaction.user.mention}蹭了蹭{target.mention}",
-                    color=discord.Color(int("394162", 16)),
+                    color=discord.Color(int("2A324B", 16)),
                 )
                 await interaction.response.send_message(embed=embed)
             elif action == InteractAction.poke:
                 embed = discord.Embed(
                     description=f"{interaction.user.mention}戳了戳{target.mention}",
-                    color=discord.Color(int("394162", 16)),
+                    color=discord.Color(int("2A324B", 16)),
                 )
                 await interaction.response.send_message(embed=embed)
             elif action == InteractAction.mua:
                 embed = discord.Embed(
                     description=f"{interaction.user.mention}親了親{target.mention}的臉",
-                    color=discord.Color(int("394162", 16)),
+                    color=discord.Color(int("2A324B", 16)),
                 )
                 await interaction.response.send_message(embed=embed)
         else:
