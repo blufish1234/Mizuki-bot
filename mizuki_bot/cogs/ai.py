@@ -22,6 +22,23 @@ class Orientation(IntEnum):
 class AI(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.ctx_menu = app_commands.ContextMenu(
+            name="中日翻譯",
+            callback=self.translate_ctx_menu,
+        )
+        self.ctx_menu.allowed_contexts = app_commands.AppCommandContext(
+            guild=True, dm_channel=True, private_channel=True
+        )
+        self.ctx_menu.allowed_installs = app_commands.AppInstallationType(
+            guild=True, user=True
+        )
+
+    async def cog_load(self):
+        self.bot.tree.add_command(self.ctx_menu)
+
+    async def cog_unload(self):
+        # Context Menus need to be explicitly removed when the cog is unloaded
+        self.bot.tree.remove_command(self.ctx_menu.name, type=self.ctx_menu.type)
 
     # AI聊天
     @app_commands.command(name="聊天", description="跟我聊天吧！")
@@ -33,7 +50,7 @@ class AI(commands.Cog):
         )
         async with interaction.channel.typing():
             await interaction.followup.send(
-                f"{ai.Chat(AIModel, content)}\n-# 目前我還不能記住之前的聊天內容 抱歉><"
+                f"{await ai.Chat(AIModel, content)}\n-# 目前我還不能記住之前的聊天內容 抱歉><"
             )
 
     # 及時AI聊天
@@ -44,7 +61,7 @@ class AI(commands.Cog):
         if isinstance(message.channel, discord.DMChannel):
             async with message.channel.typing():
                 await message.channel.send(
-                    f"{ai.Chat(AIModel, message.content)}\n-# 目前我還不能記住之前的聊天內容 抱歉><"
+                    f"{await ai.Chat(AIModel, message.content)}\n-# 目前我還不能記住之前的聊天內容 抱歉><"
                 )
         else:
             async with db.execute_ctx(
@@ -56,7 +73,7 @@ class AI(commands.Cog):
                 if message.channel.id in allowed_channels:
                     async with message.channel.typing():
                         await message.channel.send(
-                            f"{ai.Chat(AIModel, message.content)}\n-# 目前我還不能記住之前的聊天內容 抱歉><"
+                            f"{await ai.Chat(AIModel, message.content)}\n-# 目前我還不能記住之前的聊天內容 抱歉><"
                         )
 
     # 設置聊天頻道
@@ -261,7 +278,7 @@ class AI(commands.Cog):
         await interaction.response.defer(
             ephemeral=is_ephermeral
         )
-        response = f"```\n{text}\n```\n{ai.TranslateJpZht(text)}"
+        response = f"```\n{text}\n```\n{await ai.TranslateJpZht(text)}"
         await interaction.followup.send(
             response, ephemeral=is_ephermeral
         )
@@ -272,9 +289,6 @@ class AI(commands.Cog):
     async def translate_cmd(self, interaction: discord.Interaction, content: str):
         await self.translate(interaction, content, False)
 
-    @app_commands.context_menu(name="中日翻譯")
-    @app_commands.allowed_installs(guilds=True, users=True)
-    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     async def translate_ctx_menu(self, interaction: discord.Interaction, message: discord.Message):
         await self.translate(interaction, message.content, True)
 
