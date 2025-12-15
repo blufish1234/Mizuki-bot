@@ -293,7 +293,7 @@ class AI(commands.Cog):
         await interaction.response.defer(
             ephemeral=is_ephermeral
         )
-        response = f"```\n{content}\n```\n{await ai.Translate(content, target_language)}"
+        response = f"```\n{content}\n```\n```{await ai.Translate(content, target_language)}```"
         await interaction.followup.send(
             response, ephemeral=is_ephermeral
         )
