@@ -1,8 +1,7 @@
+import aiohttp
 import discord
 from discord.ext import commands
 from discord import app_commands
-import weatherapi
-from weatherapi.rest import ApiException
 from datetime import datetime
 import os
 
@@ -10,6 +9,7 @@ class Weather(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.WeatherAPIKEY = os.getenv("WEATHERAPI_API_KEY")
+        self.BaseURL = "http://api.weatherapi.com/v1/current.json"
 
     # 天氣查詢
     @app_commands.command(
@@ -20,16 +20,27 @@ class Weather(commands.Cog):
     async def rtweather(self, interaction: discord.Interaction, region: str):
         await interaction.response.defer()
 
-        configuration = weatherapi.Configuration()
-        configuration.api_key["key"] = self.WeatherAPIKEY
-
-        api_instance = weatherapi.APIsApi(weatherapi.ApiClient(configuration))
-        lang = "zh_tw"
+        params = {
+            "key": self.WeatherAPIKEY,
+            "q": region,
+            "lang": "zh_tw"
+        }
 
         try:
-            api_response = api_instance.realtime_weather(region, lang=lang)
+            async with aiohttp.ClientSession() as session:
+                async with session.get(self.BaseURL, params=params) as response:
+                    if response.status != 200:
+                        error_text = await response.text()
+                        await interaction.followup.send(
+                            f"調用API時出錯 Api->realtime_weather: Status {response.status}\n{error_text}",
+                            ephemeral=True
+                        )
+                        return
+
+                    api_response = await response.json()
+
             location = api_response.get("location", {}).get("name")
-            region = api_response.get("location", {}).get("region")
+            region_name = api_response.get("location", {}).get("region") # Renamed to avoid query conflict
             country = api_response.get("location", {}).get("country")
             weather_icon = api_response.get("current", {}).get("condition", {}).get("icon")
             weather = api_response.get("current", {}).get("condition", {}).get("text")
@@ -49,7 +60,7 @@ class Weather(commands.Cog):
             uvindex = api_response.get("current", {}).get("uv")
 
             embed = discord.Embed(
-                title=f"{location}, {region}, {country}的實時天氣",
+                title=f"{location}, {region_name}, {country}的實時天氣",
                 color=discord.Color(int("2A324B", 16)),
                 timestamp=datetime.fromtimestamp(lastupdated),
             )
@@ -70,9 +81,10 @@ class Weather(commands.Cog):
             embed.add_field(name="紫外線指數", value=f"{uvindex}")
             embed.set_author(name="WeatherAPI.com")
             await interaction.followup.send(embed=embed)
-        except ApiException as e:
+
+        except Exception as e:
             await interaction.followup.send(
-                "調用API時出錯 Api->realtime_weather: %s\n" % e, ephemeral=True
+                f"調用API時出錯 Api->realtime_weather: {e}", ephemeral=True
             )
 
 async def setup(bot):

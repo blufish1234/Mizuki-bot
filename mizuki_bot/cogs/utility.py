@@ -19,11 +19,11 @@ class Utility(commands.Cog):
         await interaction.response.send_message(f"乓！`{latency}ms`")
 
     # 隨機數字
-    # @app_commands.command(name="隨機數字", description="取得一個隨機數字")
-    # @app_commands.describe(起始數字="抽取範圍之起始（包含），默認值爲0",末尾數字="抽取範圍之結束（包含），默認值爲100",)
-    # async def random_number(self, interaction:discord.Interaction, 起始數字:int = 0, 末尾數字:int = 100):
-    #     number = random.randint(起始數字,末尾數字)
-    #     await interaction.response.send_message(f"隨便想一個數字？\n那就{number}吧！>w<")
+    @app_commands.command(name="隨機數字", description="取得一個隨機數字")
+    @app_commands.describe(起始數字="抽取範圍之起始（包含），默認值爲0",末尾數字="抽取範圍之結束（包含），默認值爲100",)
+    async def random_number(self, interaction:discord.Interaction, 起始數字:int = 0, 末尾數字:int = 100):
+        number = random.randint(起始數字,末尾數字)
+        await interaction.response.send_message(f"隨便想一個數字？\n那就{number}吧！>w<")
 
     # 隨機圖片
     @app_commands.command(name="隨機圖片", description="從Nekos API拉取隨機圖片")

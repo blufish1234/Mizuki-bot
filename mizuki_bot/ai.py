@@ -30,13 +30,16 @@ async def Chat(model, question):
     return completion.choices[0].message.content
 
 
-async def TranslateJpZht(text):
+async def Translate(text, target_language):
     client = AsyncOpenAI()
     response = await client.responses.create(
-        prompt={"id": "pmpt_685d33790e648193a4ea62fe73ee57c00eb21ac9521b57b2"},
-        input=[{"role": "user", "content": [{"type": "input_text", "text": text}]}],
-        reasoning={},
-        max_output_tokens=2048,
-        store=False,
+        prompt={
+            "id": "pmpt_69342e64188c81949d715f5d4a57154b0e67a02ea153e44a",
+            "version": "3",
+            "variables": {
+                "target_language": target_language
+            }
+        },
+        input=[{"role": "user", "content": [{"type": "input_text", "text": text}]}]
     )
     return response.output_text

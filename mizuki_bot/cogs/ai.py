@@ -2,22 +2,45 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from enum import IntEnum
+from google import genai
+from google.genai import types
 import replicate
 import aiohttp
 import io
 import asyncio
-from .. import ai, db, user
+from .. import ai, db
 
 AIModel = "chatgpt-4o-latest"
 
 class DrawModel(IntEnum):
     Prefect_Pony_XL_v5 = 1
     Animagine_XL_v4_Opt = 2
+    NanoBanana_pro = 3
 
 class Orientation(IntEnum):
     Portrait = 1
     Landscape = 2
     Square = 3
+
+class TranslationModal(discord.ui.Modal, title="翻譯設定"):
+    target_language = discord.ui.TextInput(
+        label="目標語言",
+        placeholder="例如：繁體中文、日文、English...",
+        required=True,
+    )
+
+    def __init__(self, text: str):
+        super().__init__()
+        self.text = text
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        try:
+            result = await ai.Translate(self.text, self.target_language.value)
+            response = f"```\n{self.text}\n```\n{result}"
+            await interaction.followup.send(response, ephemeral=True)
+        except Exception as e:
+            await interaction.followup.send(f"翻譯失敗: {e}", ephemeral=True)
 
 class AI(commands.Cog):
     def __init__(self, bot):
@@ -75,84 +98,6 @@ class AI(commands.Cog):
                         await message.channel.send(
                             f"{await ai.Chat(AIModel, message.content)}\n-# 目前我還不能記住之前的聊天內容 抱歉><"
                         )
-
-    # 設置聊天頻道
-    @app_commands.command(
-        name="設置聊天頻道",
-        description="（機器人管理員限定）將目前的頻道設置為AI聊天的頻道，再次執行指令以移除頻道。",
-    )
-    async def setchat(self, interaction: discord.Interaction):
-        if not interaction.guild:
-            embed = discord.Embed(
-                title="錯誤！",
-                description="這個指令只能在伺服器頻道中使用！",
-                color=discord.Color.red(),
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-            return
-        try:
-            if (
-                not await user.IsBotMaster(interaction.guild.id, interaction.user.id)
-                and not interaction.user.guild_permissions.administrator
-            ):
-                embed = discord.Embed(
-                    title="權限不足！",
-                    description="你需要管理員或機器人管理員身份組才能使用這個指令。",
-                    color=discord.Color.red(),
-                )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-                return
-        except db.Err as e:
-            embed = discord.Embed(
-                title="出錯了！",
-                description=f"無法檢查權限: `{e}`",
-                color=discord.Color.red(),
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-            return
-
-        async with db.execute_ctx(
-            "SELECT channel_id FROM AIChat_channels WHERE guild_id = ?",
-            (interaction.guild.id,),
-        ) as c:
-            allowed_channels = [row[0] for row in await c.fetchall()]
-
-            if interaction.channel.id not in allowed_channels:
-                try:
-                    await c.execute(
-                        "INSERT OR REPLACE INTO AIChat_channels (guild_id, channel_id) VALUES (?, ?)",
-                        (interaction.guild.id, interaction.channel.id),
-                    )
-                    await db.commit()
-                    embed = discord.Embed(
-                        title="設置成功!",
-                        description=f"瑞希將會回覆在{interaction.channel.mention}中的聊天內容",
-                        color=discord.Color.green(),
-                    )
-                    await interaction.response.send_message(embed=embed)
-                except Exception as e:
-                    embed = discord.Embed(
-                        title="設置失敗!", description=str(e), color=discord.Color.red()
-                    )
-                    await interaction.response.send_message(embed=embed)
-            else:
-                try:
-                    c.execute(
-                        "DELETE FROM AIChat_channels WHERE guild_id = ? AND channel_id = ?",
-                        (interaction.guild.id, interaction.channel.id),
-                    )
-                    await db.commit()
-                    embed = discord.Embed(
-                        title="移除成功!",
-                        description=f"瑞希將不再回覆在{interaction.channel.mention}中的聊天內容",
-                        color=discord.Color.green(),
-                    )
-                    await interaction.response.send_message(embed=embed)
-                except Exception as e:
-                    embed = discord.Embed(
-                        title="移除失敗!", description=str(e), color=discord.Color.red()
-                    )
-                    await interaction.response.send_message(embed=embed)
 
     # AI繪圖
     @app_commands.command(name="繪圖", description="使用AI生成圖片")
@@ -270,27 +215,91 @@ class AI(commands.Cog):
                 await interaction.edit_original_response(embed=embed, content="")
             await asyncio.sleep(0.5)
 
+    # NanoBanana Pro
+    @app_commands.command(name="nanobanana_pro", description="使用NanoBanana Pro生成圖片")
+    @app_commands.rename(prompt="提示詞",aspect_ratio="畫面比例")
+    @app_commands.describe(prompt="輸入你想要生成的圖片的提示詞",aspect_ratio="畫面比例")
+    @app_commands.choices(aspect_ratio=[
+        app_commands.Choice(name="1:1", value="1:1"),
+        app_commands.Choice(name="2:3", value="2:3"),
+        app_commands.Choice(name="3:2", value="3:2"),
+        app_commands.Choice(name="3:4", value="3:4"),
+        app_commands.Choice(name="4:3", value="4:3"),
+        app_commands.Choice(name="5:4", value="5:4"),
+        app_commands.Choice(name="4:5", value="4:5"),
+        app_commands.Choice(name="16:9", value="16:9"),
+        app_commands.Choice(name="9:16", value="9:16"),
+        app_commands.Choice(name="21:9", value="21:9"),
+    ])
+    async def nanobanana_pro(self, interaction: discord.Interaction, prompt: str, aspect_ratio: str):
+        embed = discord.Embed(
+            color=discord.Color.yellow(),
+        )
+        embed.add_field(
+            name="", value="<a:loading:1367874034368254092> 正在生成圖片……"
+        )
+        await interaction.response.send_message(embed=embed)
+        client = genai.Client()
+        model = "gemini-3-pro-image-preview"
+        contents = [
+            types.Content(
+                role="user",
+                parts=[
+                    types.Part.from_text(text=prompt),
+                ],
+            ),
+        ]
+        generate_content_config = types.GenerateContentConfig(
+            response_modalities=["IMAGE"],
+            image_config=types.ImageConfig(
+                aspect_ratio=aspect_ratio,
+                image_size="1K",
+            ),
+        )
+
+        try:
+            response = await asyncio.to_thread(
+                client.models.generate_content,
+                model=model,
+                contents=contents,
+                config=generate_content_config,
+            )
+        except Exception as e:
+            embed = discord.Embed(
+                color=discord.Color.red(),
+            )
+            embed.add_field(name="<:x:>圖片生成失敗！", value=str(e))
+            await interaction.followup.send(embed=embed)
+            return
+        for part in response.candidates[0].content.parts:
+            if part.inline_data:
+                image_data = part.inline_data.data
+                image = discord.File(io.BytesIO(image_data), filename="image.png")
+                embed = discord.Embed(
+                    color=discord.Color(int("2A324B", 16)),
+                )
+                embed.add_field(name="提示詞", value=prompt)
+                embed.set_image(url="attachment://image.png")
+                await interaction.edit_original_response(embed=embed, attachments=[image])
+
     # 中日翻譯
-    async def translate(self, interaction: discord.Interaction, text: str, IsCtxMenu: bool):
+    @app_commands.command(name="中日翻譯", description="將中文翻譯成日文，或將日文翻譯成中文")
+    @app_commands.rename(content="內容", target_language="目標語言")
+    @app_commands.describe(content="輸入你想要翻譯的中文或日文", target_language="輸入你想要翻譯成的語言")
+    async def translate_cmd(self, interaction: discord.Interaction, content: str, target_language: str):
         is_ephermeral = not (
             isinstance(interaction.channel, discord.DMChannel)
-        ) or IsCtxMenu
+        )
         await interaction.response.defer(
             ephemeral=is_ephermeral
         )
-        response = f"```\n{text}\n```\n{await ai.TranslateJpZht(text)}"
+        response = f"```\n{content}\n```\n{await ai.Translate(content, target_language)}"
         await interaction.followup.send(
             response, ephemeral=is_ephermeral
         )
 
-    @app_commands.command(name="中日翻譯", description="將中文翻譯成日文，或將日文翻譯成中文")
-    @app_commands.rename(content="內容")
-    @app_commands.describe(content="輸入你想要翻譯的中文或日文")
-    async def translate_cmd(self, interaction: discord.Interaction, content: str):
-        await self.translate(interaction, content, False)
-
     async def translate_ctx_menu(self, interaction: discord.Interaction, message: discord.Message):
-        await self.translate(interaction, message.content, True)
+        await interaction.response.send_modal(TranslationModal(message.content))
 
 async def setup(bot):
     await bot.add_cog(AI(bot))
