@@ -60,3 +60,9 @@ async def execute(
 
 async def commit():
     return await db.commit()
+
+
+async def close():
+    global db
+    if db:
+        await db.close()

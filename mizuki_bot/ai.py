@@ -35,7 +35,6 @@ async def Translate(text, target_language):
     response = await client.responses.create(
         prompt={
             "id": "pmpt_69342e64188c81949d715f5d4a57154b0e67a02ea153e44a",
-            "version": "3",
             "variables": {
                 "target_language": target_language
             }

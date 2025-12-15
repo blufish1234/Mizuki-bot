@@ -22,10 +22,10 @@ class Orientation(IntEnum):
     Landscape = 2
     Square = 3
 
-class TranslationModal(discord.ui.Modal, title="翻譯設定"):
+class TranslationModal(discord.ui.Modal, title="翻譯"):
     target_language = discord.ui.TextInput(
         label="目標語言",
-        placeholder="例如：繁體中文、日文、English...",
+        placeholder="請使用英文來鍵入。如：Traditional Chinese, Japanese, English",
         required=True,
     )
 
@@ -285,7 +285,7 @@ class AI(commands.Cog):
     # 中日翻譯
     @app_commands.command(name="中日翻譯", description="將中文翻譯成日文，或將日文翻譯成中文")
     @app_commands.rename(content="內容", target_language="目標語言")
-    @app_commands.describe(content="輸入你想要翻譯的中文或日文", target_language="輸入你想要翻譯成的語言")
+    @app_commands.describe(content="輸入你想要翻譯的中文或日文", target_language="用英文輸入你想要翻譯成的語言")
     async def translate_cmd(self, interaction: discord.Interaction, content: str, target_language: str):
         is_ephermeral = not (
             isinstance(interaction.channel, discord.DMChannel)

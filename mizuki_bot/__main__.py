@@ -16,8 +16,19 @@ intents.message_content = True
 intents.dm_messages = True
 intents.guild_messages = True
 intents.emojis_and_stickers = True
-bot = commands.Bot(command_prefix="*", intents=intents)
+class MizukiBot(commands.Bot):
+    async def setup_hook(self):
+        await self.load_extension("mizuki_bot.cogs.admin")
+        await self.load_extension("mizuki_bot.cogs.utility")
+        await self.load_extension("mizuki_bot.cogs.weather")
+        await self.load_extension("mizuki_bot.cogs.interaction")
+        await self.load_extension("mizuki_bot.cogs.ai")
 
+    async def close(self):
+        await db.close()
+        await super().close()
+
+bot = MizukiBot(command_prefix="*", intents=intents)
 
 @bot.event
 async def on_ready():
@@ -34,15 +45,6 @@ async def on_ready():
 
     logger.info(f"Synced commands for {bot.user}.")
     print("Initialization complete.")
-
-async def setup_hook():
-    await bot.load_extension("mizuki_bot.cogs.admin")
-    await bot.load_extension("mizuki_bot.cogs.utility")
-    await bot.load_extension("mizuki_bot.cogs.weather")
-    await bot.load_extension("mizuki_bot.cogs.interaction")
-    await bot.load_extension("mizuki_bot.cogs.ai")
-
-bot.setup_hook = setup_hook
 
 def main():
     bot.run(DiscordAPIKey, log_handler=InterceptHandler())
