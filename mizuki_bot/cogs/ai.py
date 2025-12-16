@@ -48,24 +48,29 @@ class OutputPromptView(discord.ui.View):
         else:
             await interaction.response.send_message(self.text, ephemeral=True)
 
-class TranslationModal(discord.ui.Modal, title="翻譯"):
-    target_language = discord.ui.TextInput(
-        label="目標語言",
-        placeholder="請用英文輸入目標語言",
-        required=True,
-    )
-
+class TranslationView(discord.ui.View):
     def __init__(self, text: str):
-        super().__init__()
+        super().__init__(timeout=None)
         self.text = text
 
-    async def on_submit(self, interaction: discord.Interaction):
+    @discord.ui.select(
+        placeholder="請選擇目標語言",
+        options=[
+            discord.SelectOption(label="繁體中文", value="Traditional Chinese"),
+            discord.SelectOption(label="簡體中文", value="Simplified Chinese"),
+            discord.SelectOption(label="日文", value="Japanese"),
+            discord.SelectOption(label="英文", value="English"),
+            discord.SelectOption(label="韓文", value="Korean"),
+        ]
+    )
+    async def select_callback(self, interaction: discord.Interaction, select: discord.ui.Select):
         embed = discord.Embed(colour=discord.Color.yellow(),)
         embed.add_field(name="",value=f"```{self.text}```",inline=False)
         embed.add_field(name="",value="<a:loading:1367874034368254092>正在翻譯……",inline=False)
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.response.edit_message(content="", embed=embed, view=None)
+
         try:
-            result = await ai.Translate(self.text, self.target_language.value)
+            result = await ai.Translate(self.text, select.values[0])
             embed=discord.Embed(colour=discord.Color(int("2A324B",16)))
             embed.add_field(name="",value=f"```{self.text}```",inline=False)
             embed.add_field(name="",value=f"```{result}```",inline=False)
@@ -79,7 +84,7 @@ class AI(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.ctx_menu = app_commands.ContextMenu(
-            name="中日翻譯",
+            name="翻譯",
             callback=self.translate_ctx_menu,
         )
         self.ctx_menu.allowed_contexts = app_commands.AppCommandContext(
@@ -108,7 +113,6 @@ class AI(commands.Cog):
             response = await ai.Chat(AIModel, content)
             await interaction.followup.send(
                 f"{response}\n-# 目前我還不能記住之前的聊天內容 抱歉><",
-                view=CopyView(response)
             )
 
     # 及時AI聊天
@@ -121,7 +125,6 @@ class AI(commands.Cog):
                 response = await ai.Chat(AIModel, message.content)
                 await message.channel.send(
                     f"{response}\n-# 目前我還不能記住之前的聊天內容 抱歉><",
-                    view=CopyView(response)
                 )
         else:
             async with db.execute_ctx(
@@ -135,7 +138,6 @@ class AI(commands.Cog):
                         response = await ai.Chat(AIModel, message.content)
                         await message.channel.send(
                             f"{response}\n-# 目前我還不能記住之前的聊天內容 抱歉><",
-                            view=CopyView(response)
                         )
 
     # AI繪圖
@@ -324,7 +326,14 @@ class AI(commands.Cog):
     # 中日翻譯
     @app_commands.command(name="翻譯", description="使用人工智慧進行翻譯")
     @app_commands.rename(content="內容", target_language="目標語言")
-    @app_commands.describe(content="輸入你想要翻譯的中文或日文", target_language="用英文輸入你想要翻譯成的語言")
+    @app_commands.describe(content="輸入你想要翻譯的中文或日文", target_language="請選擇目標語言")
+    @app_commands.choices(target_language=[
+        app_commands.Choice(name="繁體中文", value="Traditional Chinese"),
+        app_commands.Choice(name="簡體中文", value="Simplified Chinese"),
+        app_commands.Choice(name="日文", value="Japanese"),
+        app_commands.Choice(name="英文", value="English"),
+        app_commands.Choice(name="韓文", value="Korean"),
+    ])
     async def translate_cmd(self, interaction: discord.Interaction, content: str, target_language: str):
         is_ephermeral = not (
             isinstance(interaction.channel, discord.DMChannel)
@@ -340,7 +349,7 @@ class AI(commands.Cog):
         await interaction.edit_original_response(embed=embed, view=CopyView(response))
 
     async def translate_ctx_menu(self, interaction: discord.Interaction, message: discord.Message):
-        await interaction.response.send_modal(TranslationModal(message.content))
+        await interaction.response.send_message(view=TranslationView(message.content), ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(AI(bot))
