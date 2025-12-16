@@ -22,10 +22,36 @@ class Orientation(IntEnum):
     Landscape = 2
     Square = 3
 
+class CopyView(discord.ui.View):
+    def __init__(self, text: str):
+        super().__init__(timeout=None)
+        self.text = text
+
+    @discord.ui.button(emoji="📃",label="輸出翻譯結果為純文本", style=discord.ButtonStyle.secondary)
+    async def copy(self, interaction: discord.Interaction, _: discord.ui.Button):
+        if len(self.text) > 2000:
+            f = discord.File(io.BytesIO(self.text.encode("utf-8")), filename="text.txt")
+            await interaction.response.send_message(file=f, ephemeral=True)
+        else:
+            await interaction.response.send_message(self.text, ephemeral=True)
+
+class OutputPromptView(discord.ui.View):
+    def __init__(self, text: str):
+        super().__init__(timeout=None)
+        self.text = text
+
+    @discord.ui.button(emoji="📃",label="輸出提示詞為純文本", style=discord.ButtonStyle.secondary)
+    async def copy(self, interaction: discord.Interaction, _: discord.ui.Button):
+        if len(self.text) > 2000:
+            f = discord.File(io.BytesIO(self.text.encode("utf-8")), filename="text.txt")
+            await interaction.response.send_message(file=f, ephemeral=True)
+        else:
+            await interaction.response.send_message(self.text, ephemeral=True)
+
 class TranslationModal(discord.ui.Modal, title="翻譯"):
     target_language = discord.ui.TextInput(
         label="目標語言",
-        placeholder="請使用英文來鍵入。如：Traditional Chinese, Japanese, English",
+        placeholder="請用英文輸入目標語言",
         required=True,
     )
 
@@ -34,13 +60,20 @@ class TranslationModal(discord.ui.Modal, title="翻譯"):
         self.text = text
 
     async def on_submit(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
+        embed = discord.Embed(colour=discord.Color.yellow(),)
+        embed.add_field(name="",value=f"```{self.text}```",inline=False)
+        embed.add_field(name="",value="<a:loading:1367874034368254092>正在翻譯……",inline=False)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
         try:
             result = await ai.Translate(self.text, self.target_language.value)
-            response = f"```\n{self.text}\n```\n{result}"
-            await interaction.followup.send(response, ephemeral=True)
+            embed=discord.Embed(colour=discord.Color(int("2A324B",16)))
+            embed.add_field(name="",value=f"```{self.text}```",inline=False)
+            embed.add_field(name="",value=f"```{result}```",inline=False)
+            await interaction.edit_original_response(content="",embed=embed, view=CopyView(result))
         except Exception as e:
-            await interaction.followup.send(f"翻譯失敗: {e}", ephemeral=True)
+            embed=discord.Embed(colour=discord.Color.red())
+            embed.add_field(name=f":x:翻譯失敗",value=f"```{e}```",inline=False)
+            await interaction.edit_original_response(content="",embed=embed)
 
 class AI(commands.Cog):
     def __init__(self, bot):
@@ -72,8 +105,10 @@ class AI(commands.Cog):
             f"*{interaction.user.mention}說：{content}*"
         )
         async with interaction.channel.typing():
+            response = await ai.Chat(AIModel, content)
             await interaction.followup.send(
-                f"{await ai.Chat(AIModel, content)}\n-# 目前我還不能記住之前的聊天內容 抱歉><"
+                f"{response}\n-# 目前我還不能記住之前的聊天內容 抱歉><",
+                view=CopyView(response)
             )
 
     # 及時AI聊天
@@ -83,8 +118,10 @@ class AI(commands.Cog):
             return
         if isinstance(message.channel, discord.DMChannel):
             async with message.channel.typing():
+                response = await ai.Chat(AIModel, message.content)
                 await message.channel.send(
-                    f"{await ai.Chat(AIModel, message.content)}\n-# 目前我還不能記住之前的聊天內容 抱歉><"
+                    f"{response}\n-# 目前我還不能記住之前的聊天內容 抱歉><",
+                    view=CopyView(response)
                 )
         else:
             async with db.execute_ctx(
@@ -95,8 +132,10 @@ class AI(commands.Cog):
 
                 if message.channel.id in allowed_channels:
                     async with message.channel.typing():
+                        response = await ai.Chat(AIModel, message.content)
                         await message.channel.send(
-                            f"{await ai.Chat(AIModel, message.content)}\n-# 目前我還不能記住之前的聊天內容 抱歉><"
+                            f"{response}\n-# 目前我還不能記住之前的聊天內容 抱歉><",
+                            view=CopyView(response)
                         )
 
     # AI繪圖
@@ -278,25 +317,27 @@ class AI(commands.Cog):
                 embed = discord.Embed(
                     color=discord.Color(int("2A324B", 16)),
                 )
-                embed.add_field(name="提示詞", value=prompt)
+                embed.add_field(name="提示詞", value=f"```{prompt}```")
                 embed.set_image(url="attachment://image.png")
-                await interaction.edit_original_response(embed=embed, attachments=[image])
+                await interaction.edit_original_response(embed=embed, attachments=[image], view=OutputPromptView(prompt))
 
     # 中日翻譯
-    @app_commands.command(name="中日翻譯", description="將中文翻譯成日文，或將日文翻譯成中文")
+    @app_commands.command(name="翻譯", description="使用人工智慧進行翻譯")
     @app_commands.rename(content="內容", target_language="目標語言")
     @app_commands.describe(content="輸入你想要翻譯的中文或日文", target_language="用英文輸入你想要翻譯成的語言")
     async def translate_cmd(self, interaction: discord.Interaction, content: str, target_language: str):
         is_ephermeral = not (
             isinstance(interaction.channel, discord.DMChannel)
         )
-        await interaction.response.defer(
-            ephemeral=is_ephermeral
-        )
-        response = f"```\n{content}\n```\n```{await ai.Translate(content, target_language)}```"
-        await interaction.followup.send(
-            response, ephemeral=is_ephermeral
-        )
+        embed = discord.Embed(color=discord.Color.yellow())
+        embed.add_field(name="", value=f"```\n{content}\n```",inline=False)
+        embed.add_field(name="", value="<a:loading:1367874034368254092> 正在翻譯……",inline=False)
+        await interaction.response.send_message(embed=embed, ephemeral=is_ephermeral)
+        response = await ai.Translate(content, target_language)
+        embed = discord.Embed(color=discord.Color(int("2A324B", 16)))
+        embed.add_field(name="", value=f"```{content}```",inline=False)
+        embed.add_field(name="", value=f"```{response}```",inline=False)
+        await interaction.edit_original_response(embed=embed, view=CopyView(response))
 
     async def translate_ctx_menu(self, interaction: discord.Interaction, message: discord.Message):
         await interaction.response.send_modal(TranslationModal(message.content))
