@@ -1,13 +1,13 @@
-from openai import OpenAI
+from openai import AsyncOpenAI
 
 
-def Chat(model, question):
-    client = OpenAI(
+async def Chat(model, question):
+    client = AsyncOpenAI(
         # base_url="https://api.x.ai/v1",
         # api_key=XAIAPIKey,
     )
 
-    completion = client.chat.completions.create(
+    completion = await client.chat.completions.create(
         model=model,
         # frequency_penalty=0.8,
         # presence_penalty=0.2,
@@ -30,13 +30,15 @@ def Chat(model, question):
     return completion.choices[0].message.content
 
 
-def TranslateJpZht(text):
-    client = OpenAI()
-    response = client.responses.create(
-        prompt={"id": "pmpt_685d33790e648193a4ea62fe73ee57c00eb21ac9521b57b2"},
-        input=[{"role": "user", "content": [{"type": "input_text", "text": text}]}],
-        reasoning={},
-        max_output_tokens=2048,
-        store=False,
+async def Translate(text, target_language):
+    client = AsyncOpenAI()
+    response = await client.responses.create(
+        prompt={
+            "id": "pmpt_6942c2750c008194b931a54339ff6d7002bd3b5b32118f8b",
+            "variables": {
+                "target_language": target_language
+            }
+        },
+        input=[{"role": "user", "content": [{"type": "input_text", "text": text}]}]
     )
     return response.output_text

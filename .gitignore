@@ -172,3 +172,5 @@ test.py
 #test files
 generated_image.png
 data.db
+
+.vscode
