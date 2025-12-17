@@ -1,6 +1,7 @@
 import logging
 import inspect
 import sys
+from datetime import timedelta, timezone
 
 from loguru import logger
 
@@ -29,10 +30,16 @@ class InterceptHandler(logging.Handler):
         )
 
 
+# Set timezone to GMT+8
+logger.configure(
+    patcher=lambda record: record.update(
+        time=record["time"].astimezone(timezone(timedelta(hours=8)))
+    )
+)
 logger.remove()
 logger.add(
     sys.stderr,
-    format="<green>{time}</green> "
+    format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> "
     "<b>|</b> <level>{level:<8}</level>"
     "<b>|</b> <b>[</b><blue>{module}</blue><b>]</b>"
     " <level>{message}</level>",
