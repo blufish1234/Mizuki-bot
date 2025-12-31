@@ -5,19 +5,20 @@ from enum import IntEnum
 from typing import Callable
 
 import aiohttp
+
+# Keep your database import
+import db
 import discord
 import replicate
 from discord import app_commands
 from discord.ext import commands
 from google import genai
 from google.genai import types
-from openai import AsyncOpenAI
+from logger import logger
 
-# Keep your database import
-from .. import db
-from ..logger import logger
+from . import ai
 
-AIModel = "gpt-4o"
+AIModel = "gpt-4o-latest"
 
 
 class DrawModel(IntEnum):
@@ -217,12 +218,8 @@ class AI(commands.Cog):
         if not self.api_key:
             raise CompletionError.no_key(f"提示詞: {content}")
 
-        client = AsyncOpenAI(api_key=self.api_key)
         try:
-            response = await client.chat.completions.create(
-                model=model, messages=[{"role": "user", "content": content}]
-            )
-            result = response.choices[0].message.content
+            result = await ai.Chat(model, content)
             if result is None:
                 raise CompletionError.NO_CONTENT
             return result
@@ -233,13 +230,8 @@ class AI(commands.Cog):
         if not self.api_key:
             raise CompletionError.no_key(f"'{text[:10]}...' 翻譯為 {target_lang}")
 
-        client = AsyncOpenAI(api_key=self.api_key)
-        prompt = f"Translate the following text to {target_lang}:\n\n{text}"
         try:
-            response = await client.chat.completions.create(
-                model="gpt-4o", messages=[{"role": "user", "content": prompt}]
-            )
-            result = response.choices[0].message.content
+            result = await ai.Translate(text, target_lang)
             if result is None:
                 raise CompletionError.NO_CONTENT
             return result

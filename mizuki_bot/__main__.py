@@ -40,8 +40,6 @@ bot = MizukiBot(command_prefix="*", intents=intents)
 
 @bot.event
 async def on_ready():
-
-
     logger.info(f"Logged in as {bot.user}.")
 
     await bot.change_presence(
