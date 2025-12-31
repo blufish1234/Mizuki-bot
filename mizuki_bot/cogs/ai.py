@@ -105,11 +105,7 @@ class TranslationView(discord.ui.View):
             name="", value="<a:loading:1367874034368254092> 正在翻譯……", inline=False
         )
 
-        try:
-            await interaction.response.edit_message(content="", embed=embed, view=None)
-        except Exception as e:
-            await interaction.response.send_message(f"UI Error: {e}", ephemeral=True)
-            return
+        await interaction.response.edit_message(content="", embed=embed, view=None)
 
         embed = discord.Embed(colour=discord.Color(int("2A324B", 16)))
         embed.add_field(name="原文", value=f"```{self.text}```", inline=False)
