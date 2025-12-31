@@ -1,5 +1,4 @@
-from . import ai as ai
-from . import user as user
 from . import db as db
+from . import user as user
 
-__all__ = ["ai", "user", "db"]
+__all__ = ["user", "db"]
