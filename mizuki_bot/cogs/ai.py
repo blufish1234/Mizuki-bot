@@ -307,6 +307,7 @@ class AI(commands.Cog):
 
         if not should_reply:
             return
+
         async with message.channel.typing():
             try:
                 response = await self.internal_chat(AIModel, message.content)
@@ -315,6 +316,7 @@ class AI(commands.Cog):
                 )
             except CompletionError as e:
                 if e.variant == e.Variant.NO_KEY:
+                    # For some reason you can't send an embed here
                     await message.reply(
                         f"**:tools: 測試模式**\n{e}\n-# 配置 API Key 後才可以使用對話"
                     )
