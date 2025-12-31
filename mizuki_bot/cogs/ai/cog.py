@@ -406,6 +406,7 @@ class AI(commands.Cog):
                 break
             elif p.status in ["processing", "starting"]:
                 await asyncio.sleep(1)
+            last_status = p.status
 
     @app_commands.command(
         name="nanobanana_pro", description="使用 Nano Banana Pro生成圖片"
