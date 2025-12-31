@@ -5,16 +5,15 @@ from enum import IntEnum
 from typing import Callable
 
 import aiohttp
-
-# Keep your database import
-import db
 import discord
 import replicate
 from discord import app_commands
 from discord.ext import commands
 from google import genai
 from google.genai import types
-from logger import logger
+
+from mizuki_bot import db
+from mizuki_bot.logger import logger
 
 from . import ai
 

@@ -1,1 +1,3 @@
-from .cog import AI
+from .cog import setup
+
+__all__ = ["setup"]
