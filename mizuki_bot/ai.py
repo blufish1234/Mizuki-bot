@@ -34,11 +34,15 @@ async def Translate(text, target_language):
     client = AsyncOpenAI()
     response = await client.responses.create(
         prompt={
-            "id": "pmpt_6942c2750c008194b931a54339ff6d7002bd3b5b32118f8b",
+            "id": "pmpt_6953e353caa48196a2c70c6b0cf287100594ceae01dbc4a1",
             "variables": {
-                "target_language": target_language
+                "input_text": text,
+                "target_language": target_language,
             }
         },
-        input=[{"role": "user", "content": [{"type": "input_text", "text": text}]}]
+        reasoning={
+            "summary": None,
+        },
+        store=False,
     )
     return response.output_text

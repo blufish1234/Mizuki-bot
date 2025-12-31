@@ -54,7 +54,13 @@ class TranslationView(discord.ui.View):
         embed = discord.Embed(colour=discord.Color.yellow(),)
         embed.add_field(name="",value=f"```{self.text}```",inline=False)
         embed.add_field(name="",value="<a:loading:1367874034368254092>正在翻譯……",inline=False)
-        await interaction.response.edit_message(content="", embed=embed, view=None)
+        try: 
+            await interaction.response.edit_message(content="", embed=embed, view=None)
+        except Exception as e:
+            embed=discord.Embed(colour=discord.Color.red())
+            embed.add_field(name=":x:請求出錯",value=f"```{e}```",inline=False)
+            await interaction.response.edit_message(content="", embed=embed, view=None)
+            return
 
         try:
             result = await ai.Translate(self.text, select.values[0])
@@ -78,7 +84,7 @@ class TranslationInputModal(discord.ui.Modal, title="翻譯"):
         placeholder="輸入你想翻譯的內容……",
         required=True,
         min_length=1,
-        max_length=2000,
+        max_length=1024,
     )
 
     async def on_submit(self,interaction:discord.Interaction):
