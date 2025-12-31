@@ -17,7 +17,7 @@ from mizuki_bot.logger import logger
 
 from . import ai
 
-AIModel = "gpt-4o-latest"
+AIModel = "chatgpt-4o-latest"
 
 
 class DrawModel(IntEnum):
