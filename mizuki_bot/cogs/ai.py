@@ -102,7 +102,7 @@ class TranslationView(discord.ui.View):
         embed = discord.Embed(colour=discord.Color.yellow())
         embed.add_field(name="", value=f"```{self.text}```", inline=False)
         embed.add_field(
-            name="", value="<a:loading:1367874034368254092>正在翻譯……", inline=False
+            name="", value="<a:loading:1367874034368254092> 正在翻譯……", inline=False
         )
 
         try:
@@ -219,7 +219,7 @@ class AI(commands.Cog):
 
     async def internal_chat(self, model: str, content: str) -> str:
         if not self.api_key:
-            raise CompletionError.no_key(f"Prompt: {content}")
+            raise CompletionError.no_key(f"提示詞: {content}")
 
         client = AsyncOpenAI(api_key=self.api_key)
         try:
