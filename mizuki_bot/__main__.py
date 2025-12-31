@@ -18,6 +18,8 @@ intents.guild_messages = True
 intents.emojis_and_stickers = True
 class MizukiBot(commands.Bot):
     async def setup_hook(self):
+        logger.debug("Setting up database")
+        await db.setup()
         await self.load_extension("mizuki_bot.cogs.admin")
         await self.load_extension("mizuki_bot.cogs.utility")
         await self.load_extension("mizuki_bot.cogs.weather")
@@ -32,8 +34,7 @@ bot = MizukiBot(command_prefix="*", intents=intents)
 
 @bot.event
 async def on_ready():
-    logger.debug("Setting up database")
-    await db.setup()
+
 
     logger.info(f"Logged in as {bot.user}.")
 
