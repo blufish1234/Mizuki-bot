@@ -1,33 +1,45 @@
-import discord
-from discord.ext import commands
-from discord import app_commands
+import asyncio
+import io
+import os
 from enum import IntEnum
+from typing import Callable
+
+import aiohttp
+import discord
+import replicate
+from discord import app_commands
+from discord.ext import commands
 from google import genai
 from google.genai import types
-import replicate
-import aiohttp
-import io
-import asyncio
-from .. import ai, db
+from openai import AsyncOpenAI
 
-AIModel = "chatgpt-4o-latest"
+# Keep your database import
+from .. import db
+from ..logger import logger
+
+AIModel = "gpt-4o"
+
 
 class DrawModel(IntEnum):
     Prefect_Pony_XL_v5 = 1
     Animagine_XL_v4_Opt = 2
     NanoBanana_pro = 3
 
+
 class Orientation(IntEnum):
     Portrait = 1
     Landscape = 2
     Square = 3
+
 
 class OutputPromptView(discord.ui.View):
     def __init__(self, text: str):
         super().__init__(timeout=None)
         self.text = text
 
-    @discord.ui.button(emoji="📃",label="輸出提示詞為純文本", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(
+        emoji="📃", label="輸出提示詞為純文本", style=discord.ButtonStyle.secondary
+    )
     async def copy(self, interaction: discord.Interaction, _: discord.ui.Button):
         if len(self.text) > 2000:
             f = discord.File(io.BytesIO(self.text.encode("utf-8")), filename="text.txt")
@@ -35,10 +47,44 @@ class OutputPromptView(discord.ui.View):
         else:
             await interaction.response.send_message(self.text, ephemeral=True)
 
+
+class CompletionError(Exception):
+    NO_CONTENT: "CompletionError"
+    API_ERROR: "CompletionError"
+
+    class Variant(IntEnum):
+        NO_CONTENT = 0
+        NO_KEY = 1
+        API_ERROR = 2
+
+    def __init__(self, variant: Variant, *args) -> None:
+        self.variant = variant
+        super().__init__(*args)
+
+    @classmethod
+    def no_content(cls, *args) -> "CompletionError":
+        return CompletionError(cls.Variant.NO_CONTENT, *args)
+
+    @classmethod
+    def api_error(cls, *args) -> "CompletionError":
+        return CompletionError(cls.Variant.API_ERROR, *args)
+
+    @classmethod
+    def no_key(cls, *args) -> "CompletionError":
+        return CompletionError(cls.Variant.NO_KEY, *args)
+
+
+CompletionError.NO_CONTENT = CompletionError.no_content("No content")
+CompletionError.API_ERROR = CompletionError(
+    CompletionError.Variant.API_ERROR, "API Error"
+)
+
+
 class TranslationView(discord.ui.View):
-    def __init__(self, text: str):
+    def __init__(self, text: str, cog: "AI"):
         super().__init__(timeout=None)
         self.text = text
+        self.cog = cog
 
     @discord.ui.select(
         placeholder="請選擇目標語言",
@@ -48,36 +94,50 @@ class TranslationView(discord.ui.View):
             discord.SelectOption(label="日文", value="Japanese"),
             discord.SelectOption(label="英文", value="English"),
             discord.SelectOption(label="韓文", value="Korean"),
-        ]
+        ],
     )
-    async def select_callback(self, interaction: discord.Interaction, select: discord.ui.Select):
-        embed = discord.Embed(colour=discord.Color.yellow(),)
-        embed.add_field(name="",value=f"```{self.text}```",inline=False)
-        embed.add_field(name="",value="<a:loading:1367874034368254092>正在翻譯……",inline=False)
-        try: 
-            await interaction.response.edit_message(content="", embed=embed, view=None)
-        except Exception as e:
-            embed=discord.Embed(colour=discord.Color.red())
-            embed.add_field(name=":x:請求出錯",value=f"```{e}```",inline=False)
-            await interaction.response.edit_message(content="", embed=embed, view=None)
-            return
+    async def select_callback(
+        self, interaction: discord.Interaction, select: discord.ui.Select
+    ):
+        embed = discord.Embed(colour=discord.Color.yellow())
+        embed.add_field(name="", value=f"```{self.text}```", inline=False)
+        embed.add_field(
+            name="", value="<a:loading:1367874034368254092>正在翻譯……", inline=False
+        )
 
         try:
-            result = await ai.Translate(self.text, select.values[0])
-            embed=discord.Embed(colour=discord.Color(int("2A324B",16)))
-            embed.add_field(name="原文",value=f"```{self.text}```",inline=False)
-            embed.add_field(name="譯文",value=f"```{result}```",inline=False)
-            await interaction.edit_original_response(content="",embed=embed, view=TranslationResultView(self.text, result, 1))
+            await interaction.response.edit_message(content="", embed=embed, view=None)
         except Exception as e:
-            embed=discord.Embed(colour=discord.Color.red())
-            embed.add_field(name=f":x:翻譯失敗",value=f"```{e}```",inline=False)
-            await interaction.edit_original_response(content="",embed=embed)
+            await interaction.response.send_message(f"UI Error: {e}", ephemeral=True)
+            return
+
+        embed = discord.Embed(colour=discord.Color(int("2A324B", 16)))
+        embed.add_field(name="原文", value=f"```{self.text}```", inline=False)
+        try:
+            result = await self.cog.internal_translate(self.text, select.values[0])
+
+            embed.add_field(name="譯文", value=f"```{result}```", inline=False)
+            await interaction.edit_original_response(
+                content="",
+                embed=embed,
+                view=TranslationResultView(self.text, result, 1),
+            )
+        except CompletionError as e:
+            if e.variant == e.Variant.NO_KEY:
+                embed.add_field(name=":tools: 測試輸出", value=str(e), inline=False)
+                embed.set_footer(text="配置 API Key 後才可以使用人工智慧翻譯")
+            else:
+                embed.color = discord.Color.red()
+                embed.add_field(name=":x: 翻譯失敗", value=f"```{e}```", inline=False)
+            await interaction.edit_original_response(content="", embed=embed)
+
 
 class TranslationInputModal(discord.ui.Modal, title="翻譯"):
-    def __init__(self, is_ephermeral: bool):
+    def __init__(self, is_ephemeral: bool, cog: "AI"):
         super().__init__()
-        self.is_ephermeral = is_ephermeral
-    
+        self.is_ephemeral = is_ephemeral
+        self.cog = cog
+
     content = discord.ui.TextInput(
         label="原文",
         style=discord.TextStyle.long,
@@ -87,9 +147,12 @@ class TranslationInputModal(discord.ui.Modal, title="翻譯"):
         max_length=1024,
     )
 
-    async def on_submit(self,interaction:discord.Interaction):
-        await interaction.response.send_message(view=TranslationView(self.content.value), ephemeral=self.is_ephermeral)
-    
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.send_message(
+            view=TranslationView(self.content.value, self.cog),
+            ephemeral=self.is_ephemeral,
+        )
+
 
 class TranslationResultView(discord.ui.View):
     def __init__(self, source: str, result: str, state: int):
@@ -97,31 +160,44 @@ class TranslationResultView(discord.ui.View):
         self.source = source
         self.result = result
         self.state = state
-    
-    @discord.ui.button(emoji="🔄",label="切換顯示樣式", style=discord.ButtonStyle.primary)
+
+    @discord.ui.button(
+        emoji="🔄", label="切換顯示樣式", style=discord.ButtonStyle.primary
+    )
     async def switch(self, interaction: discord.Interaction, _: discord.ui.Button):
         if self.state == 1:
             embed = discord.Embed(colour=discord.Color(int("2A324B", 16)))
             embed.add_field(name="原文", value=self.source, inline=False)
             embed.add_field(name="譯文", value=self.result, inline=False)
-            await interaction.response.edit_message(embed=embed, view=TranslationResultView(self.source, self.result, 2))
+            await interaction.response.edit_message(
+                embed=embed, view=TranslationResultView(self.source, self.result, 2)
+            )
         else:
             embed = discord.Embed(colour=discord.Color(int("2A324B", 16)))
             embed.add_field(name="原文", value=f"```{self.source}```", inline=False)
             embed.add_field(name="譯文", value=f"```{self.result}```", inline=False)
-            await interaction.response.edit_message(embed=embed, view=TranslationResultView(self.source, self.result, 1))
+            await interaction.response.edit_message(
+                embed=embed, view=TranslationResultView(self.source, self.result, 1)
+            )
 
-    @discord.ui.button(emoji="📃",label="輸出翻譯結果為純文本", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(
+        emoji="📃", label="輸出翻譯結果為純文本", style=discord.ButtonStyle.secondary
+    )
     async def copy(self, interaction: discord.Interaction, _: discord.ui.Button):
         if len(self.result) > 2000:
-            f = discord.File(io.BytesIO(self.result.encode("utf-8")), filename="text.txt")
+            f = discord.File(
+                io.BytesIO(self.result.encode("utf-8")), filename="text.txt"
+            )
             await interaction.response.send_message(file=f, ephemeral=True)
         else:
             await interaction.response.send_message(self.result, ephemeral=True)
 
+
 class AI(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot, api_key: str | None = None):
         self.bot = bot
+        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        # Context menu setup
         self.ctx_menu = app_commands.ContextMenu(
             name="翻譯",
             callback=self.translate_ctx_menu,
@@ -134,55 +210,122 @@ class AI(commands.Cog):
         )
 
     async def cog_load(self):
+        if not self.api_key:
+            logger.warning("OPENAI_API_KEY not specified, test mode")
         self.bot.tree.add_command(self.ctx_menu)
 
     async def cog_unload(self):
-        # Context Menus need to be explicitly removed when the cog is unloaded
         self.bot.tree.remove_command(self.ctx_menu.name, type=self.ctx_menu.type)
 
-    # AI聊天
+    async def internal_chat(self, model: str, content: str) -> str:
+        if not self.api_key:
+            raise CompletionError.no_key(f"Prompt: {content}")
+
+        client = AsyncOpenAI(api_key=self.api_key)
+        try:
+            response = await client.chat.completions.create(
+                model=model, messages=[{"role": "user", "content": content}]
+            )
+            result = response.choices[0].message.content
+            if result is None:
+                raise CompletionError.NO_CONTENT
+            return result
+        except Exception as e:
+            raise CompletionError.api_error("API 呼叫期間出現問題") from e
+
+    async def internal_translate(self, text: str, target_lang: str) -> str:
+        if not self.api_key:
+            raise CompletionError.no_key(f"'{text[:10]}...' 翻譯為 {target_lang}")
+
+        client = AsyncOpenAI(api_key=self.api_key)
+        prompt = f"Translate the following text to {target_lang}:\n\n{text}"
+        try:
+            response = await client.chat.completions.create(
+                model="gpt-4o", messages=[{"role": "user", "content": prompt}]
+            )
+            result = response.choices[0].message.content
+            if result is None:
+                raise CompletionError.NO_CONTENT
+            return result
+        except Exception as e:
+            raise CompletionError.api_error("API 呼叫期間出現問題") from e
+
+    async def chat_response(
+        self,
+        channel: "discord.DMChannel | discord.TextChannel | discord.interactions.InteractionChannel",
+        react: Callable | discord.Webhook,
+        content: str,
+    ):
+        async def send(*args, **kwargs):
+            if isinstance(react, discord.Webhook):
+                return await react.send(*args, **kwargs)
+            await react(*args, **kwargs)
+
+        async with channel.typing():
+            try:
+                response = await self.internal_chat(AIModel, content)
+                await send(f"{response}\n-# 目前我還不能記住之前的聊天內容 抱歉><")
+            except CompletionError as e:
+                embed = discord.Embed(title=":tools: 測試模式")
+                embed.description = str(e)
+                if e.variant == e.Variant.NO_KEY:
+                    embed.set_footer(text="配置 API Key 後才可以使用對話")
+                await send(embed=embed)
+
     @app_commands.command(name="聊天", description="跟我聊天吧！")
-    @app_commands.rename(content="內容")
     @app_commands.describe(content="輸入你想對我說的話")
     async def chat(self, interaction: discord.Interaction, content: str):
         await interaction.response.send_message(
             f"*{interaction.user.mention}說：{content}*"
         )
-        async with interaction.channel.typing():
-            response = await ai.Chat(AIModel, content)
-            await interaction.followup.send(
-                f"{response}\n-# 目前我還不能記住之前的聊天內容 抱歉><",
-            )
+        await self.chat_response(interaction.channel, interaction.followup, content)
 
-    # 及時AI聊天
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
+        if not isinstance(
+            message.channel,
+            (
+                discord.DMChannel,
+                discord.TextChannel,
+            ),
+        ):
+            return
+
         if message.author.bot:
             return
+
+        should_reply = False
         if isinstance(message.channel, discord.DMChannel):
-            async with message.channel.typing():
-                response = await ai.Chat(AIModel, message.content)
-                await message.channel.send(
-                    f"{response}\n-# 目前我還不能記住之前的聊天內容 抱歉><",
-                )
+            should_reply = True
         else:
-            async with db.execute_ctx(
-                "SELECT channel_id FROM AIChat_channels WHERE guild_id = ?",
-                (message.guild.id,),
-            ) as c:
-                allowed_channels = [row[0] for row in (await c.fetchall())]
+            try:
+                async with db.execute_ctx(
+                    "SELECT channel_id FROM AIChat_channels WHERE guild_id = ?",
+                    (message.guild.id,),
+                ) as c:
+                    allowed_channels = [row[0] for row in (await c.fetchall())]
+                    if message.channel.id in allowed_channels:
+                        should_reply = True
+            except Exception:
+                pass
 
-                if message.channel.id in allowed_channels:
-                    async with message.channel.typing():
-                        response = await ai.Chat(AIModel, message.content)
-                        await message.channel.send(
-                            f"{response}\n-# 目前我還不能記住之前的聊天內容 抱歉><",
-                        )
+        if not should_reply:
+            return
+        async with message.channel.typing():
+            try:
+                response = await self.internal_chat(AIModel, message.content)
+                await message.reply(
+                    f"{response}\n-# 目前我還不能記住之前的聊天內容 抱歉><"
+                )
+            except CompletionError as e:
+                if e.variant == e.Variant.NO_KEY:
+                    await message.reply(
+                        f"**:tools: 測試模式**\n{e}\n-# 配置 API Key 後才可以使用對話"
+                    )
+                else:
+                    await message.reply(f"**:x: 錯誤**\n{e}\n")
 
-    # AI繪圖
     @app_commands.command(name="繪圖", description="使用AI生成圖片")
-    @app_commands.rename(prompt="提示詞", model="模型", orientation="畫面比例")
-    @app_commands.describe(prompt="在這裡輸入你想要的圖片提示詞")
     @app_commands.choices(
         orientation=[
             app_commands.Choice(name="2:3", value=1),
@@ -190,188 +333,177 @@ class AI(commands.Cog):
             app_commands.Choice(name="1:1", value=3),
         ]
     )
-    async def draw(self, interaction: discord.Interaction, prompt: str, model: DrawModel, orientation: Orientation):
+    async def draw(
+        self,
+        interaction: discord.Interaction,
+        prompt: str,
+        model: DrawModel,
+        orientation: Orientation,
+    ):
         await interaction.response.defer()
+
+        if not os.getenv("REPLICATE_API_TOKEN"):
+            await asyncio.sleep(2)
+            embed = discord.Embed(
+                title=":tools: [測試模式] 這是一個圖片",
+                description=f"Prompt: {prompt}",
+                color=discord.Color.green(),
+            )
+            embed.set_footer(text="配置 REPLICATE_API_TOKEN 後才可以使用圖片生成")
+            await interaction.followup.send(embed=embed)
+            return
+
         if orientation.value == Orientation.Portrait:
-            width = 832
-            height = 1216
+            width, height = 832, 1216
         elif orientation.value == Orientation.Landscape:
-            width = 1216
-            height = 832
-        else:  # Square
-            width = 1024
-            height = 1024
-        if model.value == DrawModel.Prefect_Pony_XL_v5:
-            prediction = replicate.predictions.create(
-                "aisha-ai-official/prefect-pony-xl-v5:7c724e0565055883c00dec19086e06023115737ad49cf3525f1058743769e5bf",
-                input={
+            width, height = 1216, 832
+        else:
+            width, height = 1024, 1024
+
+        try:
+            if model.value == DrawModel.Prefect_Pony_XL_v5:
+                input_data = {
                     "model": "Prefect-Pony-XL-v5",
-                    "vae": "default",
                     "prompt": f"score_9, score_8_up, score_7_up, {prompt}",
                     "negative_prompt": "realistic, nsfw",
                     "cfg_scale": 7,
                     "width": width,
                     "height": height,
-                    "clip_skip": 2,
-                    "prepend_preprompt": False,
                     "scheduler": "DPM++ 2M Karras",
-                },
-            )
-        elif model.value == DrawModel.Animagine_XL_v4_Opt:
-            prediction = replicate.predictions.create(
-                "aisha-ai-official/animagine-xl-v4-opt:cfd0f86fbcd03df45fca7ce83af9bb9c07850a3317303fe8dcf677038541db8a",
-                input={
+                }
+                model_id = "aisha-ai-official/prefect-pony-xl-v5:7c724e0565055883c00dec19086e06023115737ad49cf3525f1058743769e5bf"
+            elif model.value == DrawModel.Animagine_XL_v4_Opt:
+                input_data = {
                     "model": "Animagine-XL-v4-Opt",
-                    "vae": "default",
-                    "prompt": f"{prompt}, masterpiece, high score, great score, absurdres",
-                    "negative_prompt": "lowres, bad anatomy, bad hands, text, error, missing finger, extra digits, fewer digits, cropped, worst quality, low quality, low score, bad score, average score, signature, watermark, username, blurry",
+                    "prompt": f"{prompt}, masterpiece, high score",
+                    "negative_prompt": "lowres, bad anatomy, nsfw",
                     "width": width,
                     "height": height,
-                    "steps": 28,
-                    "pag_scale": 0,
                     "cfg_scale": 5,
-                    "clip_skip": 2,
-                    "prepend_preprompt": False,
                     "scheduler": "Euler a",
-                },
-            )
+                }
+                model_id = "aisha-ai-official/animagine-xl-v4-opt:cfd0f86fbcd03df45fca7ce83af9bb9c07850a3317303fe8dcf677038541db8a"
+
+            prediction = replicate.predictions.create(model_id, input=input_data)
+        except Exception as e:
+            await interaction.followup.send(f"圖片生成時出錯: {e}")
+            return
+
         await interaction.followup.send("請求已發送")
-        prediction_status = ""
+
+        last_status = ""
+
         while True:
             p = replicate.predictions.get(prediction.id)
             if p.status == "succeeded":
                 image_url = p.output[0]
                 async with aiohttp.ClientSession() as session:
-                    async with session.get(image_url) as image_resp:
-                        if image_resp.status != 200:
+                    async with session.get(image_url) as resp:
+                        if resp.status == 200:
+                            data = await resp.read()
+                            f = discord.File(io.BytesIO(data), filename="image.png")
                             embed = discord.Embed(
-                                color=discord.Color.red(),
+                                color=discord.Color(int("2A324B", 16))
                             )
-                            embed.add_field(
-                                name="<:x:>圖片生成失敗！",
-                                value="無法獲取圖片，請稍後再試。",
-                            )
+                            embed.set_image(url="attachment://image.png")
                             await interaction.edit_original_response(
-                                embed=embed, content=""
+                                embed=embed, attachments=[f], content=""
                             )
-                            break
-                        image_data = await image_resp.read()
-                        image = discord.File(io.BytesIO(image_data), filename="image.png")
-                        embed = discord.Embed(
-                            color=discord.Color(int("2A324B", 16)),
-                        )
-                        embed.set_image(url="attachment://image.png")
-                        embed.add_field(name="模型", value=f"{p.input['model']}")
-                        embed.add_field(name="提示詞", value=f"{p.input['prompt']}")
-                        await interaction.edit_original_response(
-                            embed=embed, attachments=[image], content=""
-                        )
-                        break
-            elif p.status == "failed":
-                error_message = str(p.error)
-                embed = discord.Embed(
-                    color=discord.Color.red(),
-                )
-                embed.add_field(name="<:x:>圖片生成失敗！", value=error_message)
-                await interaction.edit_original_response(embed=embed, content="")
+                        else:
+                            await interaction.edit_original_response(content="下載失敗")
                 break
-            elif p.status == "processing" and prediction_status != "processing":
-                prediction_status = "processing"
-                embed = discord.Embed(
-                    color=discord.Color.yellow(),
-                )
-                embed.add_field(
-                    name="", value="<a:loading:1367874034368254092> 正在生成圖片……"
-                )
-                await interaction.edit_original_response(embed=embed, content="")
-            elif p.status == "starting" and prediction_status != "starting":
-                prediction_status = "starting"
-                embed = discord.Embed(
-                    color=discord.Color.yellow(),
-                )
-                embed.add_field(
-                    name="", value="<a:loading:1367874034368254092> 正在初始化……"
-                )
-                await interaction.edit_original_response(embed=embed, content="")
-            await asyncio.sleep(0.5)
+            elif p.status == "failed" and last_status != "failed":
+                await interaction.edit_original_response(content=f"生成失敗: {p.error}")
+                break
+            elif p.status in ["processing", "starting"]:
+                await asyncio.sleep(1)
 
-    # NanoBanana Pro
-    @app_commands.command(name="nanobanana_pro", description="使用NanoBanana Pro生成圖片")
-    @app_commands.rename(prompt="提示詞",aspect_ratio="畫面比例")
-    @app_commands.describe(prompt="輸入你想要生成的圖片的提示詞",aspect_ratio="畫面比例")
-    @app_commands.choices(aspect_ratio=[
-        app_commands.Choice(name="1:1", value="1:1"),
-        app_commands.Choice(name="2:3", value="2:3"),
-        app_commands.Choice(name="3:2", value="3:2"),
-        app_commands.Choice(name="3:4", value="3:4"),
-        app_commands.Choice(name="4:3", value="4:3"),
-        app_commands.Choice(name="5:4", value="5:4"),
-        app_commands.Choice(name="4:5", value="4:5"),
-        app_commands.Choice(name="16:9", value="16:9"),
-        app_commands.Choice(name="9:16", value="9:16"),
-        app_commands.Choice(name="21:9", value="21:9"),
-    ])
-    async def nanobanana_pro(self, interaction: discord.Interaction, prompt: str, aspect_ratio: str):
+    @app_commands.command(
+        name="nanobanana_pro", description="使用 Nano Banana Pro生成圖片"
+    )
+    @app_commands.rename(prompt="提示詞", aspect_ratio="畫面比例")
+    @app_commands.describe(
+        prompt="輸入你想要生成的圖片的提示詞", aspect_ratio="畫面比例"
+    )
+    @app_commands.choices(
+        aspect_ratio=[
+            app_commands.Choice(name="1:1", value="1:1"),
+            app_commands.Choice(name="2:3", value="2:3"),
+            app_commands.Choice(name="3:2", value="3:2"),
+            app_commands.Choice(name="3:4", value="3:4"),
+            app_commands.Choice(name="4:3", value="4:3"),
+            app_commands.Choice(name="5:4", value="5:4"),
+            app_commands.Choice(name="4:5", value="4:5"),
+            app_commands.Choice(name="16:9", value="16:9"),
+            app_commands.Choice(name="9:16", value="9:16"),
+            app_commands.Choice(name="21:9", value="21:9"),
+        ]
+    )
+    async def nanobanana_pro(
+        self, interaction: discord.Interaction, prompt: str, aspect_ratio: str
+    ):
         embed = discord.Embed(
             color=discord.Color.yellow(),
-        )
-        embed.add_field(
-            name="", value="<a:loading:1367874034368254092> 正在生成圖片……"
+            description="<a:loading:1367874034368254092> 正在生成圖片……",
         )
         await interaction.response.send_message(embed=embed)
-        client = genai.Client()
-        model = "gemini-3-pro-image-preview"
-        contents = [
-            types.Content(
-                role="user",
-                parts=[
-                    types.Part.from_text(text=prompt),
-                ],
-            ),
-        ]
-        generate_content_config = types.GenerateContentConfig(
-            response_modalities=["IMAGE"],
-            image_config=types.ImageConfig(
-                aspect_ratio=aspect_ratio,
-                image_size="1K",
-            ),
-        )
+
+        if not os.getenv("GOOGLE_API_KEY"):
+            await asyncio.sleep(2)
+            embed = discord.Embed(
+                title="[測試模式] 這會是一個圖片",
+                description=f"Prompt: {prompt}",
+                color=discord.Color.blue(),
+            )
+            await interaction.edit_original_response(embed=embed)
+            return
 
         try:
+            client = genai.Client()
             response = await asyncio.to_thread(
                 client.models.generate_content,
-                model=model,
-                contents=contents,
-                config=generate_content_config,
+                model="gemini-3-pro-image-preview",
+                contents=[
+                    types.Content(
+                        role="user", parts=[types.Part.from_text(text=prompt)]
+                    )
+                ],
+                config=types.GenerateContentConfig(
+                    response_modalities=["IMAGE"],
+                    image_config=types.ImageConfig(aspect_ratio=aspect_ratio),
+                ),
             )
+
+            for part in response.candidates[0].content.parts:
+                if part.inline_data:
+                    image = discord.File(
+                        io.BytesIO(part.inline_data.data), filename="image.png"
+                    )
+                    embed = discord.Embed(color=discord.Color(int("2A324B", 16)))
+                    embed.set_image(url="attachment://image.png")
+                    await interaction.edit_original_response(
+                        embed=embed, attachments=[image], view=OutputPromptView(prompt)
+                    )
+                    return
+
         except Exception as e:
             embed = discord.Embed(
-                color=discord.Color.red(),
+                color=discord.Color.red(), title="Error", description=str(e)
             )
-            embed.add_field(name="<:x:>圖片生成失敗！", value=str(e))
-            await interaction.followup.send(embed=embed)
-            return
-        for part in response.candidates[0].content.parts:
-            if part.inline_data:
-                image_data = part.inline_data.data
-                image = discord.File(io.BytesIO(image_data), filename="image.png")
-                embed = discord.Embed(
-                    color=discord.Color(int("2A324B", 16)),
-                )
-                embed.add_field(name="提示詞", value=f"```{prompt}```")
-                embed.set_image(url="attachment://image.png")
-                await interaction.edit_original_response(embed=embed, attachments=[image], view=OutputPromptView(prompt))
+            await interaction.edit_original_response(embed=embed)
 
-    # 中日翻譯
     @app_commands.command(name="翻譯", description="使用人工智慧進行翻譯")
     async def translate_cmd(self, interaction: discord.Interaction):
-        is_ephermeral = not (
-            isinstance(interaction.channel, discord.DMChannel)
-        )
-        await interaction.response.send_modal(TranslationInputModal(is_ephermeral))
+        is_ephemeral = not isinstance(interaction.channel, discord.DMChannel)
+        await interaction.response.send_modal(TranslationInputModal(is_ephemeral, self))
 
-    async def translate_ctx_menu(self, interaction: discord.Interaction, message: discord.Message):
-        await interaction.response.send_message(view=TranslationView(message.content), ephemeral=True)
+    async def translate_ctx_menu(
+        self, interaction: discord.Interaction, message: discord.Message
+    ):
+        await interaction.response.send_message(
+            view=TranslationView(message.content, self), ephemeral=True
+        )
+
 
 async def setup(bot):
     await bot.add_cog(AI(bot))

@@ -1,9 +1,11 @@
+import os
+
 import discord
 from discord.ext import commands
-import os
 from dotenv import load_dotenv
-from .logger import logger, InterceptHandler
+
 from . import db
+from .logger import InterceptHandler, logger
 
 load_dotenv()
 
@@ -16,6 +18,8 @@ intents.message_content = True
 intents.dm_messages = True
 intents.guild_messages = True
 intents.emojis_and_stickers = True
+
+
 class MizukiBot(commands.Bot):
     async def setup_hook(self):
         logger.debug("Setting up database")
@@ -30,7 +34,9 @@ class MizukiBot(commands.Bot):
         await db.close()
         await super().close()
 
+
 bot = MizukiBot(command_prefix="*", intents=intents)
+
 
 @bot.event
 async def on_ready():
@@ -45,7 +51,8 @@ async def on_ready():
     await bot.tree.sync()
 
     logger.info(f"Synced commands for {bot.user}.")
-    print("Initialization complete.")
+    logger.success("Initialization complete.")
+
 
 def main():
     bot.run(DiscordAPIKey, log_handler=InterceptHandler())
