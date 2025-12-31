@@ -135,7 +135,7 @@ class Admin(commands.Cog):
                     await interaction.response.send_message(embed=embed)
             else:
                 try:
-                    c.execute(
+                    await c.execute(
                         "DELETE FROM AIChat_channels WHERE guild_id = ? AND channel_id = ?",
                         (interaction.guild.id, interaction.channel.id),
                     )
