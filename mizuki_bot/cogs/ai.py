@@ -88,7 +88,9 @@ class TranslationInputModal(discord.ui.Modal, title="翻譯"):
     )
 
     async def on_submit(self,interaction:discord.Interaction):
-        await interaction.response.send_message(view=TranslationView(self.content.value), ephemeral=self.is_ephermeral)
+        embed = discord.Embed(colour=discord.Color.yellow())
+        embed.add_field(name="原文",value=f"```{self.content.value}```",inline=False)
+        await interaction.response.send_message(embed=embed, view=TranslationView(self.content.value), ephemeral=self.is_ephermeral)
     
 
 class TranslationResultView(discord.ui.View):
@@ -98,6 +100,39 @@ class TranslationResultView(discord.ui.View):
         self.result = result
         self.state = state
     
+    @discord.ui.select(
+        placeholder="請選擇目標語言",
+        options=[
+            discord.SelectOption(label="繁體中文", value="Traditional Chinese"),
+            discord.SelectOption(label="簡體中文", value="Simplified Chinese"),
+            discord.SelectOption(label="日文", value="Japanese"),
+            discord.SelectOption(label="英文", value="English"),
+            discord.SelectOption(label="韓文", value="Korean"),
+        ]
+    )
+    async def select_callback(self, interaction: discord.Interaction, select: discord.ui.Select):
+        embed = discord.Embed(colour=discord.Color.yellow())
+        embed.add_field(name="", value=f"```{self.source}```", inline=False)
+        embed.add_field(name="", value="<a:loading:1367874034368254092>正在翻譯……", inline=False)
+        try: 
+            await interaction.response.edit_message(content="", embed=embed, view=None)
+        except Exception as e:
+            embed=discord.Embed(colour=discord.Color.red())
+            embed.add_field(name=":x:請求出錯",value=f"```{e}```",inline=False)
+            await interaction.response.edit_message(content="", embed=embed, view=None)
+            return
+
+        try:
+            result = await ai.Translate(self.source, select.values[0])
+            embed=discord.Embed(colour=discord.Color(int("2A324B", 16)))
+            embed.add_field(name="原文", value=f"```{self.source}```", inline=False)
+            embed.add_field(name="譯文", value=f"```{result}```", inline=False)
+            await interaction.edit_original_response(content="",embed=embed, view=TranslationResultView(self.source, result, 1))
+        except Exception as e:
+            embed=discord.Embed(colour=discord.Color.red())
+            embed.add_field(name=f":x:翻譯失敗",value=f"```{e}```",inline=False)
+            await interaction.edit_original_response(content="",embed=embed)
+
     @discord.ui.button(emoji="🔄",label="切換顯示樣式", style=discord.ButtonStyle.primary)
     async def switch(self, interaction: discord.Interaction, _: discord.ui.Button):
         if self.state == 1:
@@ -371,7 +406,9 @@ class AI(commands.Cog):
         await interaction.response.send_modal(TranslationInputModal(is_ephermeral))
 
     async def translate_ctx_menu(self, interaction: discord.Interaction, message: discord.Message):
-        await interaction.response.send_message(view=TranslationView(message.content), ephemeral=True)
+        embed=discord.Embed(colour=discord.Color.yellow())
+        embed.add_field(name="", value=f"```{message.content}```", inline=False)
+        await interaction.response.send_message(embed=embed, view=TranslationView(message.content), ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(AI(bot))
