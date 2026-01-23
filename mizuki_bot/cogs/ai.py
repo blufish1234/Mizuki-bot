@@ -112,8 +112,8 @@ class TranslationResultView(discord.ui.View):
     )
     async def select_callback(self, interaction: discord.Interaction, select: discord.ui.Select):
         embed = discord.Embed(colour=discord.Color.yellow())
-        embed.add_field(name="原文", value=f"```{self.source}```", inline=False)
-        embed.add_field(name="譯文", value="<a:loading:1367874034368254092>正在翻譯……", inline=False)
+        embed.add_field(name="", value=f"```{self.source}```", inline=False)
+        embed.add_field(name="", value="<a:loading:1367874034368254092>正在翻譯……", inline=False)
         try: 
             await interaction.response.edit_message(content="", embed=embed, view=None)
         except Exception as e:
@@ -406,7 +406,9 @@ class AI(commands.Cog):
         await interaction.response.send_modal(TranslationInputModal(is_ephermeral))
 
     async def translate_ctx_menu(self, interaction: discord.Interaction, message: discord.Message):
-        await interaction.response.send_message(view=TranslationView(message.content), ephemeral=True)
+        embed=discord.Embed(colour=discord.Color.yellow())
+        embed.add_field(name="", value=f"```{message.content}```", inline=False)
+        await interaction.response.send_message(embed=embed, view=TranslationView(message.content), ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(AI(bot))
