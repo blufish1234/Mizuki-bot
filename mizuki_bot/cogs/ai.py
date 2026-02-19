@@ -10,7 +10,7 @@ import io
 import asyncio
 from .. import ai, db
 
-AIModel = "chatgpt-4o-latest"
+AIModel = "gpt-4o"
 
 class DrawModel(IntEnum):
     Prefect_Pony_XL_v5 = 1
