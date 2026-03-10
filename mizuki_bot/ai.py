@@ -1,5 +1,12 @@
 from openai import AsyncOpenAI
+from google import genai
+from google.genai import types
+from pathlib import Path
 
+PROMPT_PATH = Path(__file__).parent / "TranslationPrompt.md"
+
+with open(PROMPT_PATH, "r", encoding="utf-8") as f:
+    TranslationPrompt = f.read()
 
 async def Chat(model, question):
     client = AsyncOpenAI(
@@ -31,18 +38,24 @@ async def Chat(model, question):
 
 
 async def Translate(text, target_language):
-    client = AsyncOpenAI()
-    response = await client.responses.create(
-        prompt={
-            "id": "pmpt_6953e353caa48196a2c70c6b0cf287100594ceae01dbc4a1",
-            "variables": {
-                "input_text": text,
-                "target_language": target_language,
-            }
-        },
-        reasoning={
-            "summary": None,
-        },
-        store=False,
+    client = genai.Client()
+
+    tools = types.Tool(
+        google_search=types.GoogleSearch()
     )
-    return response.output_text
+
+    config = types.GenerateContentConfig(
+        tools=[tools],
+        thinking_config=types.ThinkingConfig(
+            thinking_level="high"
+        )
+    )
+
+    response = await client.aio.models.generate_content(
+        model="gemini-3.1-flash-lite-preview",
+        contents=TranslationPrompt.format(text=text, target_language=target_language),
+        config=config,
+    )
+
+    return response.text
+        
