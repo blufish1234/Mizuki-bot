@@ -42,8 +42,6 @@ async def Chat(model, question):
 
 
 async def Translate(text, target_language, mode):
-    client = genai.Client()
-
     if mode == "fast": 
         model = "gemini-3.1-flash-lite-preview"
         thinking_level = "high"
@@ -60,6 +58,8 @@ async def Translate(text, target_language, mode):
         model = "gemini-3.1-flash-lite-preview"
         thinking_level = "minimal"
         prompt = TranslationPromptNoThinking
+
+    client = genai.Client()
 
     tools = types.Tool(
         google_search=types.GoogleSearch()
