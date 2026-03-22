@@ -4,9 +4,13 @@ from google.genai import types
 from pathlib import Path
 
 PROMPT_PATH = Path(__file__).parent / "TranslationPrompt.md"
+PROMPT_PATH_NO_THINKING = Path(__file__).parent / "TranslationPromptNoThinking.md"
 
 with open(PROMPT_PATH, "r", encoding="utf-8") as f:
     TranslationPrompt = f.read()
+
+with open(PROMPT_PATH_NO_THINKING, "r", encoding="utf-8") as f:
+    TranslationPromptNoThinking = f.read()
 
 async def Chat(model, question):
     client = AsyncOpenAI(
@@ -37,8 +41,25 @@ async def Chat(model, question):
     return completion.choices[0].message.content
 
 
-async def Translate(text, target_language):
+async def Translate(text, target_language, mode):
     client = genai.Client()
+
+    if mode == "fast": 
+        model = "gemini-3.1-flash-lite-preview"
+        thinking_level = "high"
+        prompt = TranslationPrompt
+    elif mode == "balanced":
+        model = "gemini-3-flash-preview"
+        thinking_level = "high"
+        prompt = TranslationPrompt
+    elif mode == "quality":
+        model = "gemini-3.1-pro-preview"
+        thinking_level = "medium"
+        prompt = TranslationPrompt
+    elif mode == "instant":
+        model = "gemini-3.1-flash-lite-preview"
+        thinking_level = "minimal"
+        prompt = TranslationPromptNoThinking
 
     tools = types.Tool(
         google_search=types.GoogleSearch()
@@ -47,13 +68,13 @@ async def Translate(text, target_language):
     config = types.GenerateContentConfig(
         tools=[tools],
         thinking_config=types.ThinkingConfig(
-            thinking_level="high"
+            thinking_level=thinking_level
         )
     )
 
     response = await client.aio.models.generate_content(
-        model="gemini-3.1-flash-lite-preview",
-        contents=TranslationPrompt.format(text=text, target_language=target_language),
+        model=model,
+        contents=prompt.format(text=text, target_language=target_language),
         config=config,
     )
 
