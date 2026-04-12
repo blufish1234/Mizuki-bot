@@ -1,1 +1,26 @@
+[project]
+name = "mizuki-bot"
+version = "2.4.1"
+description = "讓你的 Discord 聊天不再單調！"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.13"
+dependencies = [
+    "aiohttp",
+    "aiosqlite",
+    "anthropic",
+    "audioop-lts",
+    "discord-py",
+    "docstring-parser",
+    "google-genai",
+    "loguru",
+    "openai",
+    "pip-review",
+    "python-dotenv",
+    "replicate",
+    "tenacity",
+    "weatherapipython",
+]
 
+[tool.uv.sources]
+weatherapipython = { git = "https://github.com/weatherapicom/python.git", rev = "05344f2d04cbf0b9513cb69b71f56a66a348e1be" }

@@ -9,6 +9,22 @@
 5. 查詢天氣(`/查詢天氣`)：直接從聊天頻道中查詢實時詳細天氣！
 6. 多語言翻譯(`/翻譯`)：使用AI進行多語言互相翻譯（支持繁簡中、日、英、韓語）。
 
+## Docker
+
+### 構建
+
+```sh
+docker build . -t mizuki_bot
+```
+
+### 使用
+
+*把 `<Discord Token>` 替換為你的 Bot Token*
+
+```
+docker run -e DISCORDAPI_TOKEN="<Discord Token>" mizuki_bot
+```
+
 *此項目正在積極開發中，更多功能盡情期待！*
 ## 協議
 這個項目受GPL v3.0協議的版權保護。詳情請見[此處](LICENSE)
