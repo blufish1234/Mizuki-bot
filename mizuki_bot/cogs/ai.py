@@ -71,6 +71,7 @@ class TranslationInputModal(discord.ui.Modal, title="翻譯"):
             options=[
                 discord.SelectOption(label="繁體中文", value="Traditional Chinese", emoji="🇹🇼"),
                 discord.SelectOption(label="簡體中文", value="Simplified Chinese", emoji="🇨🇳"),
+                discord.SelectOption(lable="粵語", value="Cantonese", emoji="🇭🇰"),
                 discord.SelectOption(label="日文", value="Japanese", emoji="🇯🇵"),
                 discord.SelectOption(label="英文", value="English", emoji="🇺🇸"),
                 discord.SelectOption(label="韓文", value="Korean", emoji="🇰🇷")
@@ -128,6 +129,7 @@ class TranslationctxModal(discord.ui.Modal, title="翻譯"):
             options=[
                 discord.SelectOption(label="繁體中文", value="Traditional Chinese", emoji="🇹🇼"),
                 discord.SelectOption(label="簡體中文", value="Simplified Chinese", emoji="🇨🇳"),
+                discord.SelectOption(label="粵語", value="Cantonese", emoji="🇭🇰"),
                 discord.SelectOption(label="日文", value="Japanese", emoji="🇯🇵"),
                 discord.SelectOption(label="英文", value="English", emoji="🇺🇸"),
                 discord.SelectOption(label="韓文", value="Korean", emoji="🇰🇷")
