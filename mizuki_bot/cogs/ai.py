@@ -1,3 +1,5 @@
+from operator import truediv
+
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -55,10 +57,9 @@ class TranslationInputModal(discord.ui.Modal, title="翻譯"):
             placeholder="請選擇模式", 
             required=True,
             options=[
-                discord.SelectOption(label="即時", value="instant", emoji="⚡"),
-                discord.SelectOption(label="快速", value="fast",default=True, emoji="🚀"),
-                discord.SelectOption(label="平衡", value="balanced", emoji="⚖️"),
-                discord.SelectOption(label="品質", value="quality", emoji="💎")
+                discord.SelectOption(label="及時", value="fast",emoji="⚡"),
+                discord.SelectOption(label="快速", value="balanced",default=True,emoji="🚀"),
+                discord.SelectOption(label="品質", value="quality",emoji="💎")
             ]
         )
     )
@@ -71,6 +72,7 @@ class TranslationInputModal(discord.ui.Modal, title="翻譯"):
             options=[
                 discord.SelectOption(label="繁體中文", value="Traditional Chinese", emoji="🇹🇼"),
                 discord.SelectOption(label="簡體中文", value="Simplified Chinese", emoji="🇨🇳"),
+                discord.SelectOption(label="粵語", value="Cantonese", emoji="🇭🇰"),
                 discord.SelectOption(label="日文", value="Japanese", emoji="🇯🇵"),
                 discord.SelectOption(label="英文", value="English", emoji="🇺🇸"),
                 discord.SelectOption(label="韓文", value="Korean", emoji="🇰🇷")
@@ -112,10 +114,9 @@ class TranslationctxModal(discord.ui.Modal, title="翻譯"):
             placeholder="請選擇模式", 
             required=True,
             options=[
-                discord.SelectOption(label="即時", value="instant", emoji="⚡"),
-                discord.SelectOption(label="快速", value="fast",default=True, emoji="🚀"),
-                discord.SelectOption(label="平衡", value="balanced", emoji="⚖️"),
-                discord.SelectOption(label="品質", value="quality", emoji="💎")
+                discord.SelectOption(label="及時", value="fast",emoji="⚡"),
+                discord.SelectOption(label="快速", value="balanced",default=True,emoji="🚀"),
+                discord.SelectOption(label="品質", value="quality",emoji="💎")
             ]
         )
     )
@@ -128,6 +129,7 @@ class TranslationctxModal(discord.ui.Modal, title="翻譯"):
             options=[
                 discord.SelectOption(label="繁體中文", value="Traditional Chinese", emoji="🇹🇼"),
                 discord.SelectOption(label="簡體中文", value="Simplified Chinese", emoji="🇨🇳"),
+                discord.SelectOption(label="粵語", value="Cantonese", emoji="🇭🇰"),
                 discord.SelectOption(label="日文", value="Japanese", emoji="🇯🇵"),
                 discord.SelectOption(label="英文", value="English", emoji="🇺🇸"),
                 discord.SelectOption(label="韓文", value="Korean", emoji="🇰🇷")
@@ -167,11 +169,12 @@ class TranslationResultView(discord.ui.View):
     @discord.ui.select(
         placeholder="請選擇目標語言",
         options=[
-            discord.SelectOption(label="繁體中文", value="Traditional Chinese",emoji="🇹🇼"),
-            discord.SelectOption(label="簡體中文", value="Simplified Chinese",emoji="🇨🇳"),
-            discord.SelectOption(label="日文", value="Japanese",emoji="🇯🇵"),
-            discord.SelectOption(label="英文", value="English",emoji="🇺🇸"),
-            discord.SelectOption(label="韓文", value="Korean",emoji="🇰🇷"),
+            discord.SelectOption(label="繁體中文", value="Traditional Chinese", emoji="🇹🇼"),
+            discord.SelectOption(label="簡體中文", value="Simplified Chinese", emoji="🇨🇳"),
+            discord.SelectOption(label="粵語", value="Cantonese", emoji="🇭🇰"),
+            discord.SelectOption(label="日文", value="Japanese", emoji="🇯🇵"),
+            discord.SelectOption(label="英文", value="English", emoji="🇺🇸"),
+            discord.SelectOption(label="韓文", value="Korean", emoji="🇰🇷")
         ]
     )
     async def select_callback(self, interaction: discord.Interaction, select: discord.ui.Select):
@@ -290,6 +293,19 @@ class AI(commands.Cog):
         ]
     )
     async def draw(self, interaction: discord.Interaction, prompt: str, model: DrawModel, orientation: Orientation):
+        if interaction.guild:
+            async with db.execute_ctx(
+                "SELECT guild_id FROM AIImageGen_disabled WHERE guild_id = ?",
+                (interaction.guild.id,),
+            ) as c:
+                if await c.fetchone():
+                    embed = discord.Embed(
+                        title="功能已關閉",
+                        description="此伺服器已關閉 AI 生圖功能。",
+                        color=discord.Color.red(),
+                    )
+                    await interaction.response.send_message(embed=embed, ephemeral=True)
+                    return
         await interaction.response.defer()
         if orientation.value == Orientation.Portrait:
             width = 832
@@ -411,6 +427,19 @@ class AI(commands.Cog):
         app_commands.Choice(name="21:9", value="21:9"),
     ])
     async def nanobanana_pro(self, interaction: discord.Interaction, prompt: str, aspect_ratio: str):
+        if interaction.guild:
+            async with db.execute_ctx(
+                "SELECT guild_id FROM AIImageGen_disabled WHERE guild_id = ?",
+                (interaction.guild.id,),
+            ) as c:
+                if await c.fetchone():
+                    embed = discord.Embed(
+                        title="功能已關閉",
+                        description="此伺服器已關閉 AI 生圖功能。",
+                        color=discord.Color.red(),
+                    )
+                    await interaction.response.send_message(embed=embed, ephemeral=True)
+                    return
         embed = discord.Embed(
             color=discord.Color.yellow(),
         )

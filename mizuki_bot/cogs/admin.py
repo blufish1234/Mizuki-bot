@@ -151,5 +151,81 @@ class Admin(commands.Cog):
                         title="移除失敗!", description=str(e), color=discord.Color.red()
                     )
                     await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(
+        name="開關生圖功能",
+        description="（機器人管理員限定）開關在此伺服器內是否可以使用AI生圖功能"
+    )
+    async def ToggleAIImageGen(self, interaction: discord.Interaction):
+        if not interaction.guild:
+            embed = discord.Embed(
+                title="錯誤！",
+                description="這個指令只能在伺服器頻道中使用！",
+                color=discord.Color.red(),
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+
+        try:
+            if (
+                not await user.IsBotMaster(interaction.guild.id, interaction.user.id)
+                and not interaction.user.guild_permissions.administrator
+            ):
+                embed = discord.Embed(
+                    title="權限不足！",
+                    description="你需要管理員或機器人管理員身份組才能使用這個指令。",
+                    color=discord.Color.red(),
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+                return
+        except db.Err as e:
+            embed = discord.Embed(
+                title="出錯了！",
+                description=f"無法檢查權限: `{e}`",
+                color=discord.Color.red(),
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+
+        guild_id = interaction.guild.id
+        try:
+            async with db.execute_ctx(
+                "SELECT guild_id FROM AIImageGen_disabled WHERE guild_id = ?",
+                (guild_id,),
+            ) as c:
+                result = await c.fetchone()
+
+                if result:
+                    await db.execute(
+                        "DELETE FROM AIImageGen_disabled WHERE guild_id = ?",
+                        (guild_id,),
+                    )
+                    await db.commit()
+                    embed = discord.Embed(
+                        title="成功！",
+                        description="已在此伺服器**開啟** AI生圖功能。",
+                        color=discord.Color.green(),
+                    )
+                    await interaction.response.send_message(embed=embed)
+                else:
+                    await db.execute(
+                        "INSERT INTO AIImageGen_disabled (guild_id) VALUES (?)",
+                        (guild_id,),
+                    )
+                    await db.commit()
+                    embed = discord.Embed(
+                        title="成功！",
+                        description="已在此伺服器**關閉** AI生圖功能。",
+                        color=discord.Color.green(),
+                    )
+                    await interaction.response.send_message(embed=embed)
+        except db.Err as e:
+            embed = discord.Embed(
+                title="出錯了！",
+                description=f"無法更新設定: `{e}`",
+                color=discord.Color.red(),
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+
 async def setup(bot):
     await bot.add_cog(Admin(bot))
