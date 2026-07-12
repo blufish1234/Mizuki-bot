@@ -1,6 +1,6 @@
 [project]
 name = "mizuki-bot"
-version = "2.4.2"
+version = "2.5.0"
 description = "讓你的 Discord 聊天不再單調！"
 readme = "README.md"
 license = { file = "LICENSE" }

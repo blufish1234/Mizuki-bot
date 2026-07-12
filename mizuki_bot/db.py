@@ -27,6 +27,9 @@ async def setup(path: str | Path = "data.db"):
                         role_id INTEGER,
                         PRIMARY KEY (guild_id)
                     )""")
+    await db.execute("""CREATE TABLE IF NOT EXISTS AIImageGen_disabled (
+                        guild_id INTEGER PRIMARY KEY
+                    )""")
 
     await db.commit()
 
